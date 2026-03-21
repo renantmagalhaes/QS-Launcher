@@ -10,8 +10,11 @@ ShellRoot {
 
     DankSpotlightModal {
         id: launcher
-        
+
         Component.onCompleted: {
+            if (Quickshell.env("SPOTLIGHT_START_HIDDEN") === "1")
+                return;
+
             Qt.callLater(() => {
                 launcher.show();
             });

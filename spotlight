@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MAIN_QML="$SCRIPT_DIR/main.qml"
+
+if quickshell ipc --path "$MAIN_QML" call launcher toggle >/dev/null 2>&1; then
+    exit 0
+fi
+
+SPOTLIGHT_START_HIDDEN=1 quickshell -d -n -p "$MAIN_QML" >/dev/null 2>&1 &
+
+# Give the daemon a moment to initialize its IPC handler.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if quickshell ipc --path "$MAIN_QML" call launcher show >/dev/null 2>&1; then
+        exit 0
+    fi
+    sleep 0.1
+done
+
+echo "spotlight: quickshell started, but IPC was not ready in time" >&2
+exit 1

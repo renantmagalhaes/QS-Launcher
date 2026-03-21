@@ -17,10 +17,16 @@ A portable, standalone application launcher built with Quickshell.
 ## Usage
 
 ### 1. Launch the Shell
-To start the Spotlight launcher in the background (daemon mode) and prevent duplicate instances:
+To open Spotlight immediately:
 
 ```bash
-quickshell -d -n -p main.qml
+quickshell -p main.qml
+```
+
+To start it hidden in the background (daemon mode) for compositor autostart:
+
+```bash
+SPOTLIGHT_START_HIDDEN=1 quickshell -d -n -p main.qml
 ```
 
 ### 2. Toggle the Launcher
@@ -35,6 +41,13 @@ Add this to your shell configuration (e.g., `~/.zshrc` or `~/.bashrc`):
 
 ```bash
 alias spotlight='quickshell ipc --path main.qml call launcher toggle'
+```
+
+### 4. Start-Or-Toggle Helper
+This repo includes a small helper script named `spotlight`. It toggles an existing instance, or starts the daemon hidden and then shows the launcher on first run:
+
+```bash
+./spotlight
 ```
 
 ## Shortcuts
