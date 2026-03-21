@@ -76,6 +76,11 @@ Available themes are currently:
 
 - `default`
 - `midnight`
+- `dracula`
+- `nord`
+- `tokyo-night`
+- `gruvbox`
+- `rose-pine`
 - `dark`
 - `catppuccin`
 - `dark-purple`
