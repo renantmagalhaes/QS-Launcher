@@ -60,7 +60,7 @@ Item {
                     if (Array.isArray(list)) {
                         parsed = list.map(win => ({
                             id: win.address ? "address:" + win.address : (win.pid ? "pid:" + win.pid : win.title),
-                            name: (win.title || win.initialTitle || win.appId || win.class || "Unknown") + " [Window]",
+                            name: win.title || win.initialTitle || win.appId || win.class || "Unknown",
                             comment: win.initialTitle || win.class || "",
                             class: win.class || win.initialClass || win.appId || "",
                             icon: "application-x-window",
@@ -83,7 +83,7 @@ Item {
                     const title = cols.slice(4).join(" ");
                     return {
                         id: windowId,
-                        name: (title || className || "Unknown") + " [Window]",
+                        name: title || className || "Unknown",
                         comment: className || "",
                         class: className || "",
                         icon: "application-x-window",
