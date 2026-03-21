@@ -14,6 +14,7 @@ Item {
     property var _searchEntries: []
     property var _finder: null
     property int cacheVersion: 0
+    property int maxSearchResults: 24
 
     function refreshApplications() {
         if (typeof DesktopEntries !== "undefined") {
@@ -83,13 +84,14 @@ Item {
             selector: function (entry) {
                 return entry.text;
             },
+            limit: maxSearchResults,
             tiebreakers: [Fzf.byLengthAsc, Fzf.byStartAsc]
         });
 
         return _finder;
     }
 
-    function searchApplications(query) {
+    function searchApplications(query, maxResults) {
         const visible = applications.slice();
         if (!query)
             return visible.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -99,6 +101,10 @@ Item {
             return visible.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
         const finder = _ensureFinder();
-        return finder.find(q).map(result => result.item.app);
+        const limit = Math.max(1, maxResults || maxSearchResults);
+        const matches = finder.find(q).map(result => result.item.app);
+        if (matches.length > limit)
+            matches.length = limit;
+        return matches;
     }
 }

@@ -27,6 +27,11 @@ Item {
     property var appCategories: []
     property string appCategory: ""
     property bool autoSwitchedToFiles: false
+    property int windowRefreshIntervalMs: 500
+    property double _lastWindowRefreshAt: 0
+    property int maxSearchResultsPerSection: 12
+    property int maxAppResultsInAllMode: 18
+    property int maxAppResultsInAppsMode: 24
 
     signal itemExecuted
     signal modeChanged(string mode)
@@ -40,8 +45,22 @@ Item {
 
     Timer {
         id: searchDebounce
-        interval: 50
+        interval: 100
         onTriggered: root.performSearch()
+    }
+
+    function ensureWindowResults(forceRefresh) {
+        const now = Date.now();
+        const shouldRefresh = forceRefresh
+            || _lastWindowRefreshAt === 0
+            || (now - _lastWindowRefreshAt) >= windowRefreshIntervalMs;
+
+        if (shouldRefresh) {
+            WindowSearchService.refreshWindows();
+            _lastWindowRefreshAt = now;
+        }
+
+        return WindowSearchService.windows || [];
     }
 
     function setSearchQuery(query) {
@@ -54,6 +73,8 @@ Item {
             return;
         searchMode = mode;
         modeChanged(mode);
+        if (mode === "all" || mode === "windows")
+            ensureWindowResults(true);
         performSearch();
     }
 
@@ -119,20 +140,20 @@ Item {
             allItems.push(Transform.transformCalcResult(calcResult, query, I18n.tr("Copy")));
 
         if (searchMode === "all" || searchMode === "windows") {
-            WindowSearchService.refreshWindows();
-            const windows = WindowSearchService.windows || [];
+            const windows = ensureWindowResults(false);
             for (let i = 0; i < windows.length; i++)
                 allItems.push(Transform.transformWindow(windows[i], I18n.tr("Focus"), desktopEntries));
         }
 
         if (searchMode === "apps" || (searchMode === "all" && query.length > 0)) {
-            const apps = AppSearchService.searchApplications(query);
+            const appLimit = searchMode === "apps" ? maxAppResultsInAppsMode : maxAppResultsInAllMode;
+            const apps = AppSearchService.searchApplications(query, appLimit);
             for (let i = 0; i < apps.length; i++)
                 allItems.push(getOrTransformApp(apps[i]));
         }
 
         const scoredItems = Scorer.scoreItems(allItems, query, null);
-        const grouped = Scorer.groupBySection(scoredItems, sectionDefinitions, SettingsData.sortAppsAlphabetically, query ? 50 : 500, query);
+        const grouped = Scorer.groupBySection(scoredItems, sectionDefinitions, SettingsData.sortAppsAlphabetically, query ? maxSearchResultsPerSection : 500, query);
 
         for (let i = 0; i < grouped.length; i++) {
             if (grouped[i].collapsed === undefined)
@@ -145,6 +166,11 @@ Item {
         selectedFlatIndex = getFirstItemIndex();
         updateSelectedItem();
         searchCompleted();
+    }
+
+    onActiveChanged: {
+        if (active)
+            ensureWindowResults(true);
     }
 
     function _applyHighlights(sectionsData, query) {
