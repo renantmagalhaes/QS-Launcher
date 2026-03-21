@@ -14,6 +14,11 @@ const Weights = {
     }
 }
 
+const MinFuzzyScore = {
+    shortQuery: 0.75,
+    longQuery: 0.82
+}
+
 function tokenize(text) {
     return text.toLowerCase().trim().split(/[\s\-_]+/).filter(function (w) { return w.length > 0 })
 }
@@ -103,7 +108,8 @@ function calculateTextScore(name, query) {
 
     if (query.length >= 3) {
         var fs = fuzzyScore(name, query)
-        if (fs > 0) return fs * Weights.fuzzy
+        var minScore = query.length <= 5 ? MinFuzzyScore.shortQuery : MinFuzzyScore.longQuery
+        if (fs >= minScore) return fs * Weights.fuzzy
     }
 
     return 0
@@ -203,10 +209,11 @@ function scoreItems(items, query, getFrecencyFn) {
     return scored
 }
 
-function groupBySection(scoredItems, sectionOrder, sortAlphabetically, maxPerSection) {
+function groupBySection(scoredItems, sectionOrder, sortAlphabetically, maxPerSection, query) {
     var sections = {}
     var result = []
     var limit = maxPerSection || 50
+    var hasQuery = Boolean(query && query.trim().length > 0)
 
     for (var i = 0; i < sectionOrder.length; i++) {
         var sectionId = sectionOrder[i].id
@@ -236,7 +243,7 @@ function groupBySection(scoredItems, sectionOrder, sortAlphabetically, maxPerSec
     for (var i = 0; i < sectionOrder.length; i++) {
         var section = sections[sectionOrder[i].id]
         if (section && section.items.length > 0) {
-            if (sortAlphabetically && section.id === "apps") {
+            if (sortAlphabetically && section.id === "apps" && !hasQuery) {
                 section.items.sort(function (a, b) {
                     return (a.name || "").localeCompare(b.name || "")
                 })

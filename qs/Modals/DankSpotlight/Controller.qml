@@ -132,7 +132,7 @@ Item {
         }
 
         const scoredItems = Scorer.scoreItems(allItems, query, null);
-        const grouped = Scorer.groupBySection(scoredItems, sectionDefinitions, SettingsData.sortAppsAlphabetically, query ? 50 : 500);
+        const grouped = Scorer.groupBySection(scoredItems, sectionDefinitions, SettingsData.sortAppsAlphabetically, query ? 50 : 500, query);
 
         for (let i = 0; i < grouped.length; i++) {
             if (grouped[i].collapsed === undefined)
