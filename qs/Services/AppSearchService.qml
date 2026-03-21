@@ -91,6 +91,29 @@ Item {
         return _finder;
     }
 
+    function _scoreDirectNameMatch(app, query) {
+        const name = (app.name || "").toLowerCase();
+        const genericName = (app.genericName || "").toLowerCase();
+        const comment = (app.comment || "").toLowerCase();
+
+        if (name === query)
+            return 400;
+        if (name.startsWith(query))
+            return 300;
+        if (genericName.startsWith(query))
+            return 220;
+        if (name.includes(query))
+            return 180;
+        if (genericName.includes(query))
+            return 140;
+        if (comment.startsWith(query))
+            return 90;
+        if (comment.includes(query))
+            return 60;
+
+        return 0;
+    }
+
     function searchApplications(query, maxResults) {
         const visible = applications.slice();
         if (!query)
@@ -102,9 +125,47 @@ Item {
 
         const finder = _ensureFinder();
         const limit = Math.max(1, maxResults || maxSearchResults);
-        const matches = finder.find(q).map(result => result.item.app);
-        if (matches.length > limit)
-            matches.length = limit;
+        const seen = ({});
+        const directMatches = [];
+
+        for (let i = 0; i < applications.length; i++) {
+            const app = applications[i];
+            const score = _scoreDirectNameMatch(app, q);
+            if (score <= 0)
+                continue;
+
+            const id = app.id || app.execString || app.exec || app.name || ("app_" + i);
+            directMatches.push({
+                app: app,
+                score: score,
+                name: app.name || ""
+            });
+            seen[id] = true;
+        }
+
+        directMatches.sort((a, b) => {
+            if (b.score !== a.score)
+                return b.score - a.score;
+            return a.name.localeCompare(b.name);
+        });
+
+        const matches = [];
+        for (let i = 0; i < directMatches.length && matches.length < limit; i++)
+            matches.push(directMatches[i].app);
+
+        if (matches.length >= limit)
+            return matches;
+
+        const fuzzyMatches = finder.find(q).map(result => result.item.app);
+        for (let i = 0; i < fuzzyMatches.length && matches.length < limit; i++) {
+            const app = fuzzyMatches[i];
+            const id = app.id || app.execString || app.exec || app.name || ("fuzzy_" + i);
+            if (seen[id])
+                continue;
+            seen[id] = true;
+            matches.push(app);
+        }
+
         return matches;
     }
 }
