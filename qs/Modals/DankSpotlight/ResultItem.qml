@@ -72,16 +72,17 @@ Rectangle {
         }
     }
 
-    Row {
+    Item {
         anchors.fill: parent
         anchors.leftMargin: Theme.spacingM
         anchors.rightMargin: Theme.spacingM
-        spacing: Theme.spacingM
 
         AppIconRenderer {
+            id: appIcon
             width: 36
             height: 36
             anchors.verticalCenter: parent.verticalCenter
+            anchors.left: parent.left
             iconValue: root.iconValue
             iconSize: 36
             fallbackText: (root.item?.name?.length > 0) ? root.item.name.charAt(0).toUpperCase() : "?"
@@ -89,26 +90,31 @@ Rectangle {
         }
 
         Column {
+            id: textContent
             anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - 36 - Theme.spacingM * 3 - rightContent.width
+            anchors.left: appIcon.right
+            anchors.leftMargin: Theme.spacingM
+            anchors.right: rightContent.left
+            anchors.rightMargin: rightContent.visible ? Theme.spacingM : 0
             spacing: 2
 
             Text {
                 width: parent.width
                 text: root.item?._hName ?? root.item?.name ?? ""
-                textFormat: root.item?._hRich ? Text.RichText : Text.PlainText
+                textFormat: root.item?._hRich ? Text.StyledText : Text.PlainText
                 font.pixelSize: Theme.fontSizeMedium
                 font.weight: Font.Medium
                 font.family: Theme.fontFamily
                 color: Theme.surfaceText
                 elide: Text.ElideRight
+                clip: true
                 horizontalAlignment: Text.AlignLeft
             }
 
             Text {
                 width: parent.width
                 text: root.item?._hSub ?? root.item?.subtitle ?? ""
-                textFormat: root.item?._hRich ? Text.RichText : Text.PlainText
+                textFormat: root.item?._hRich ? Text.StyledText : Text.PlainText
                 font.pixelSize: Theme.fontSizeSmall
                 font.family: Theme.fontFamily
                 color: Theme.surfaceVariantText
@@ -121,6 +127,7 @@ Rectangle {
 
         Row {
             id: rightContent
+            anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.spacingS
 

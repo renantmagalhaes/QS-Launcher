@@ -182,10 +182,18 @@ Item {
         const idx = text.toLowerCase().indexOf(lowerQuery);
         if (idx === -1)
             return text;
-        const before = text.substring(0, idx);
-        const match = text.substring(idx, idx + queryLen);
-        const after = text.substring(idx + queryLen);
-        return '<span style="color:' + baseColor + '">' + before + '</span><span style="color:' + highlightColor + '; font-weight:600">' + match + '</span><span style="color:' + baseColor + '">' + after + '</span>';
+        const before = _escapeStyledText(text.substring(0, idx));
+        const match = _escapeStyledText(text.substring(idx, idx + queryLen));
+        const after = _escapeStyledText(text.substring(idx + queryLen));
+        return '<font color="' + baseColor + '">' + before + '</font><b><font color="' + highlightColor + '">' + match + '</font></b><font color="' + baseColor + '">' + after + '</font>';
+    }
+
+    function _escapeStyledText(text) {
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
     }
 
     function getFirstItemIndex() {

@@ -64,12 +64,13 @@ Rectangle {
         Text {
             width: parent.width
             text: root.item?._hName ?? root.item?.name ?? ""
-            textFormat: root.item?._hRich ? Text.RichText : Text.PlainText
+            textFormat: root.item?._hRich ? Text.StyledText : Text.PlainText
             font.pixelSize: Theme.fontSizeSmall
             font.weight: Font.Medium
             font.family: Theme.fontFamily
             color: root.isSelected ? Theme.primary : Theme.surfaceText
             elide: Text.ElideRight
+            clip: true
             horizontalAlignment: Text.AlignHCenter
             maximumLineCount: 2
             wrapMode: Text.Wrap
