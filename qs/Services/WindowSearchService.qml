@@ -6,7 +6,7 @@ import Quickshell
 import Quickshell.Io
 import "../Common"
 
-Singleton {
+Item {
     id: root
 
     property var windows: []

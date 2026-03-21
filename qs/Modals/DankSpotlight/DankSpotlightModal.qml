@@ -104,11 +104,6 @@ Item {
             var targetMode = mode || SessionData.launcherLastMode || "all";
             spotlightContent.controller.searchMode = targetMode;
             spotlightContent.controller.appCategory = "";
-            spotlightContent.controller.fileSearchType = "all";
-            spotlightContent.controller.fileSearchExt = "";
-            spotlightContent.controller.fileSearchFolder = "";
-            spotlightContent.controller.fileSearchSort = "score";
-            spotlightContent.controller.collapsedSections = {};
             spotlightContent.controller.selectedFlatIndex = 0;
             spotlightContent.controller.selectedItem = null;
             if (query) {
@@ -286,9 +281,9 @@ Item {
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
 
-        WlrLayershell.namespace: "dms:spotlight"
+        WlrLayershell.namespace: "spotlight:launcher"
         WlrLayershell.layer: {
-            switch (Quickshell.env("DMS_MODAL_LAYER")) {
+            switch (Quickshell.env("SPOTLIGHT_MODAL_LAYER")) {
             case "bottom":
                 console.error("DankModal: 'bottom' layer is not valid for modals. Defaulting to 'top' layer.");
                 return WlrLayershell.Top;
@@ -384,7 +379,7 @@ Item {
                 borderColor: root.borderColor
                 borderWidth: root.borderWidth
                 targetRadius: root.cornerRadius
-                shadowEnabled: Theme.elevationEnabled && SettingsData.modalElevationEnabled && Quickshell.env("DMS_DISABLE_LAYER") !== "true" && Quickshell.env("DMS_DISABLE_LAYER") !== "1"
+                shadowEnabled: Theme.elevationEnabled && SettingsData.modalElevationEnabled && Quickshell.env("SPOTLIGHT_DISABLE_LAYER") !== "true" && Quickshell.env("SPOTLIGHT_DISABLE_LAYER") !== "1"
             }
 
             MouseArea {

@@ -1,12 +1,13 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
+import QtQml
 import QtQuick
 import Quickshell
 import "../Common"
 
 // Reusable ListView/GridView transitions
-Singleton {
+QtObject {
     id: root
 
     readonly property Transition add: Transition {

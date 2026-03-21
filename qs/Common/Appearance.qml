@@ -1,10 +1,11 @@
 pragma Singleton
 pragma ComponentBehavior: Bound
 
+import QtQml
 import QtQuick
 import Quickshell
 
-Singleton {
+QtObject {
     id: root
 
     readonly property Rounding rounding: Rounding {}

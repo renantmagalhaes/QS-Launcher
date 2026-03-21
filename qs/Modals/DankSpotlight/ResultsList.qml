@@ -427,7 +427,7 @@ Item {
 
             DankIcon {
                 anchors.horizontalCenter: parent.horizontalCenter
-                name: root.controller?.searchMode === "files" ? "folder_off" : root.controller?.searchMode === "windows" ? "window" : "search_off"
+                name: root.controller?.searchMode === "windows" ? "window" : "search_off"
                 size: 48
                 color: Theme.outlineButton
 
@@ -438,8 +438,6 @@ Item {
                 text: {
                     if (root.controller.searchMode === "apps")
                         return I18n.tr("No apps found");
-                    if (root.controller.searchMode === "files")
-                        return I18n.tr("No files found");
                     if (root.controller.searchMode === "windows")
                         return I18n.tr("No open windows found");
                     return I18n.tr("No results found");

@@ -1,10 +1,10 @@
 # Standalone Spotlight Launcher
 
-A portable, standalone version of the DankMaterialShell Spotlight launcher, designed to run independently of the `dms` Go backend and IPC socket.
+A portable, standalone application launcher built with Quickshell.
 
 ## Features
 
-- **Standalone Mode**: Runs without the `dms` binary or IPC socket.
+- **Standalone Mode**: Runs without any external shell backend or IPC socket.
 - **Backend Fallbacks**:
     - **Mock Apps**: Provides a curated list of applications (Firefox, Terminal, etc.) when the system application database is unavailable.
 - **Window Switching**: Search and switch between open windows using `hyprctl` (Hyprland) or `wmctrl` (Other compositors).
