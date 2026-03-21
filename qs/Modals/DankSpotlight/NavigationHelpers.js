@@ -8,6 +8,14 @@ function getFirstItemIndex(flatModel) {
     return 0;
 }
 
+function getLastItemIndex(flatModel) {
+    for (var i = flatModel.length - 1; i >= 0; i--) {
+        if (!flatModel[i].isHeader)
+            return i;
+    }
+    return 0;
+}
+
 function findNextNonHeaderIndex(flatModel, startIndex) {
     for (var i = startIndex; i < flatModel.length; i++) {
         if (!flatModel[i].isHeader)
@@ -63,13 +71,13 @@ function calculateNextIndex(flatModel, selectedFlatIndex, sectionId, viewMode, g
     var entry = flatModel[selectedFlatIndex];
     if (!entry || entry.isHeader) {
         var next = findNextNonHeaderIndex(flatModel, selectedFlatIndex + 1);
-        return next !== -1 ? next : selectedFlatIndex;
+        return next !== -1 ? next : getFirstItemIndex(flatModel);
     }
 
     var actualViewMode = viewMode || getSectionViewModeFn(entry.sectionId);
     if (actualViewMode === "list") {
         var next = findNextNonHeaderIndex(flatModel, selectedFlatIndex + 1);
-        return next !== -1 ? next : selectedFlatIndex;
+        return next !== -1 ? next : getFirstItemIndex(flatModel);
     }
 
     var bounds = getSectionBounds(flatModel, entry.sectionId);
@@ -88,7 +96,7 @@ function calculateNextIndex(flatModel, selectedFlatIndex, sectionId, viewMode, g
     }
 
     var nextSection = findNextNonHeaderIndex(flatModel, bounds.end + 1);
-    return nextSection !== -1 ? nextSection : selectedFlatIndex;
+    return nextSection !== -1 ? nextSection : getFirstItemIndex(flatModel);
 }
 
 function calculatePrevIndex(flatModel, selectedFlatIndex, sectionId, viewMode, gridColumns, getSectionViewModeFn) {
@@ -98,13 +106,13 @@ function calculatePrevIndex(flatModel, selectedFlatIndex, sectionId, viewMode, g
     var entry = flatModel[selectedFlatIndex];
     if (!entry || entry.isHeader) {
         var prev = findPrevNonHeaderIndex(flatModel, selectedFlatIndex - 1);
-        return prev !== -1 ? prev : selectedFlatIndex;
+        return prev !== -1 ? prev : getLastItemIndex(flatModel);
     }
 
     var actualViewMode = viewMode || getSectionViewModeFn(entry.sectionId);
     if (actualViewMode === "list") {
         var prev = findPrevNonHeaderIndex(flatModel, selectedFlatIndex - 1);
-        return prev !== -1 ? prev : selectedFlatIndex;
+        return prev !== -1 ? prev : getLastItemIndex(flatModel);
     }
 
     var bounds = getSectionBounds(flatModel, entry.sectionId);
@@ -117,7 +125,7 @@ function calculatePrevIndex(flatModel, selectedFlatIndex, sectionId, viewMode, g
     }
 
     var prevItem = findPrevNonHeaderIndex(flatModel, bounds.start - 1);
-    return prevItem !== -1 ? prevItem : selectedFlatIndex;
+    return prevItem !== -1 ? prevItem : getLastItemIndex(flatModel);
 }
 
 function calculateRightIndex(flatModel, selectedFlatIndex, getSectionViewModeFn) {
