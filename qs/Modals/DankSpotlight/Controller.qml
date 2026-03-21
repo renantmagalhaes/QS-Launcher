@@ -125,7 +125,7 @@ Item {
                 allItems.push(Transform.transformWindow(windows[i], I18n.tr("Focus"), desktopEntries));
         }
 
-        if (searchMode === "apps" || query.length > 0) {
+        if (searchMode === "apps" || (searchMode === "all" && query.length > 0)) {
             const apps = AppSearchService.searchApplications(query);
             for (let i = 0; i < apps.length; i++)
                 allItems.push(getOrTransformApp(apps[i]));
