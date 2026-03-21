@@ -258,3 +258,29 @@ function transformWindow(win, focusLabel) {
         _preScored: undefined
     };
 }
+
+function transformCalcResult(result, query, copyLabel) {
+    return {
+        id: "calc_" + query,
+        type: "calc",
+        name: result,
+        subtitle: query,
+        icon: "calculate",
+        iconType: "material",
+        section: "calculator",
+        data: {
+            result: result,
+            query: query
+        },
+        actions: [],
+        primaryAction: {
+            name: copyLabel,
+            icon: "content_copy",
+            action: "copy"
+        },
+        _hName: "",
+        _hSub: "",
+        _hRich: false,
+        _preScored: 1000 // Best possible score
+    };
+}

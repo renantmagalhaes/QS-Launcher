@@ -9,6 +9,7 @@ import "Scorer.js" as Scorer
 import "ControllerUtils.js" as Utils
 import "NavigationHelpers.js" as Nav
 import "ItemTransformers.js" as Transform
+import "../../Common/Calculator.js" as Calculator
 
 Item {
     id: root
@@ -138,6 +139,13 @@ Item {
     }
 
     readonly property var sectionDefinitions: [
+        {
+            id: "calculator",
+            title: I18n.tr("Calculator"),
+            icon: "calculate",
+            priority: 0.1,
+            defaultViewMode: "list"
+        },
         {
             id: "favorites",
             title: I18n.tr("Pinned"),
@@ -576,6 +584,11 @@ Item {
 
         var allItems = [];
 
+        var calcResult = Calculator.evaluate(searchQuery);
+        if (calcResult) {
+            allItems.push(Transform.transformCalcResult(calcResult, searchQuery, I18n.tr("Copy")));
+        }
+
         var triggerMatch = detectTrigger(searchQuery);
         if (triggerMatch.pluginId) {
             var pluginChanged = activePluginId !== triggerMatch.pluginId;
@@ -794,6 +807,14 @@ Item {
                 _pluginPhaseForceFirst = shouldResetSelection;
                 pluginPhaseTimer.restart();
                 isSearching = true;
+
+                // Render current results immediately before waiting for plugins
+                var currentDynamicDefs = buildDynamicSectionDefs(allItems);
+                var currentScoredItems = Scorer.scoreItems(allItems, searchQuery, getFrecencyForItem);
+                var currentSections = Scorer.groupBySection(currentScoredItems, currentDynamicDefs, false, 50);
+                sections = currentSections;
+                flatModel = Scorer.flattenSections(currentSections);
+                
                 searchCompleted();
                 return;
             } else if (!searchQuery) {
@@ -810,10 +831,9 @@ Item {
                             allItems.push(pItems[j]);
                     }
                 }
-
                 var browseItems = getPluginBrowseItems();
-                for (var i = 0; i < browseItems.length; i++)
-                    allItems.push(browseItems[i]);
+                for (var k = 0; k < browseItems.length; k++)
+                    allItems.push(browseItems[k]);
             }
         }
 

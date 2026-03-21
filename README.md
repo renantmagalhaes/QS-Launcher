@@ -8,6 +8,7 @@ A portable, standalone version of the DankMaterialShell Spotlight launcher, desi
 - **Backend Fallbacks**:
     - **Mock Apps**: Provides a curated list of applications (Firefox, Terminal, etc.) when the system application database is unavailable.
 - **Window Switching**: Search and switch between open windows using `hyprctl` (Hyprland) or `wmctrl` (Other compositors).
+- **Embedded Calculator**: Perform calculations directly in the search bar (e.g., `5*5+(10/2)`).
 - **Default Theming**: Includes a premium Material 3 color palette for immediate use.
     - **Silent Execution**: Suppresses backend-related warnings and process errors.
 - **IPC Support**: Can be toggled, shown, or hidden via the `quickshell ipc` command.

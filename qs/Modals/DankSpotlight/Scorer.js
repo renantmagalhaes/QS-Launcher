@@ -138,7 +138,12 @@ function score(item, query, frecencyData) {
         }
     }
 
-    if (textScore === 0) return 0
+    if (textScore === 0) {
+        if (item._preScored !== undefined) {
+             return item._preScored;
+        }
+        return 0;
+    }
 
     var usageBonus = frecencyData ? Math.min(frecencyData.usageCount * 50, Weights.frecency) : 0
 
