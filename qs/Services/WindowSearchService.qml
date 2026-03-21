@@ -62,6 +62,7 @@ Singleton {
                             id: win.address ? "address:" + win.address : (win.pid ? "pid:" + win.pid : win.title),
                             name: (win.title || win.initialTitle || win.appId || win.class || "Unknown") + " [Window]",
                             comment: win.initialTitle || win.class || "",
+                            class: win.class || win.initialClass || win.appId || "",
                             icon: "application-x-window",
                             windowId: win.address ? "address:" + win.address : "",
                             isWindow: true,
@@ -84,6 +85,7 @@ Singleton {
                         id: windowId,
                         name: (title || className || "Unknown") + " [Window]",
                         comment: className || "",
+                        class: className || "",
                         icon: "application-x-window",
                         windowId: windowId,
                         isWindow: true

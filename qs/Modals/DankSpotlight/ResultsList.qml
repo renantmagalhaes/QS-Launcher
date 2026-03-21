@@ -427,69 +427,26 @@ Item {
 
             DankIcon {
                 anchors.horizontalCenter: parent.horizontalCenter
-                name: getEmptyIcon()
+                name: root.controller?.searchMode === "files" ? "folder_off" : root.controller?.searchMode === "windows" ? "window" : "search_off"
                 size: 48
                 color: Theme.outlineButton
 
-                function getEmptyIcon() {
-                    var mode = root.controller?.searchMode ?? "all";
-                    switch (mode) {
-                    case "files":
-                        var fileType = root.controller?.fileSearchType ?? "all";
-                        switch (fileType) {
-                        case "dir":
-                            return "folder_open";
-                        case "file":
-                            return "insert_drive_file";
-                        default:
-                            return "folder_open";
-                        }
-                    case "plugins":
-                        return "extension";
-                    case "apps":
-                        return "apps";
-                    default:
-                        return root.controller?.searchQuery?.length > 0 ? "search_off" : "search";
-                    }
-                }
             }
 
             StyledText {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: getEmptyText()
+                text: {
+                    if (root.controller.searchMode === "apps")
+                        return I18n.tr("No apps found");
+                    if (root.controller.searchMode === "files")
+                        return I18n.tr("No files found");
+                    if (root.controller.searchMode === "windows")
+                        return I18n.tr("No open windows found");
+                    return I18n.tr("No results found");
+                }
                 font.pixelSize: Theme.fontSizeMedium
                 color: Theme.surfaceVariantText
                 horizontalAlignment: Text.AlignHCenter
-
-                function getEmptyText() {
-                    var mode = root.controller?.searchMode ?? "all";
-                    var hasQuery = root.controller?.searchQuery?.length > 0;
-
-                    switch (mode) {
-                    case "files":
-                        if (!DSearchService.dsearchAvailable)
-                            return I18n.tr("File search requires dsearch\nInstall from github.com/AvengeMedia/danksearch");
-                        if (!hasQuery)
-                            return I18n.tr("Type to search files");
-                        if (root.controller.searchQuery.length < 2)
-                            return I18n.tr("Type at least 2 characters");
-                        var fileType = root.controller?.fileSearchType ?? "all";
-                        switch (fileType) {
-                        case "dir":
-                            return I18n.tr("No folders found");
-                        case "file":
-                            return I18n.tr("No files found");
-                        default:
-                            return I18n.tr("No results found");
-                        }
-                    case "plugins":
-                        return hasQuery ? I18n.tr("No plugin results") : I18n.tr("Browse or search plugins");
-                    case "apps":
-                        return hasQuery ? I18n.tr("No apps found") : I18n.tr("Type to search apps");
-                    default:
-                        return hasQuery ? I18n.tr("No results found") : I18n.tr("Type to search");
-                    }
-                }
             }
         }
     }

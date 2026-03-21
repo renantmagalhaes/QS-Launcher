@@ -20,18 +20,7 @@ Popup {
     function hasContextMenuActions(spotlightItem) {
         if (!spotlightItem)
             return false;
-        if (spotlightItem.type === "app")
-            return true;
-        if (spotlightItem.type === "plugin" && spotlightItem.pluginId) {
-            var instance = PluginService.pluginInstances[spotlightItem.pluginId];
-            if (!instance)
-                return false;
-            if (typeof instance.getContextMenuActions !== "function")
-                return false;
-            var actions = instance.getContextMenuActions(spotlightItem.data);
-            return Array.isArray(actions) && actions.length > 0;
-        }
-        return false;
+        return spotlightItem.type === "app";
     }
 
     readonly property bool isCoreApp: item?.type === "app" && !!item?.isCore
@@ -39,62 +28,15 @@ Popup {
     readonly property var desktopEntry: !isCoreApp ? (item?.data ?? null) : null
     readonly property string appId: {
         if (isCoreApp) {
-            return item?.id || coreAppData?.builtInPluginId || "";
+            return item?.id || "";
         }
         return desktopEntry?.id || desktopEntry?.execString || "";
     }
     readonly property bool isPinned: appId ? SessionData.isPinnedApp(appId) : false
     readonly property bool isRegularApp: item?.type === "app" && !item.isCore && desktopEntry
-    readonly property bool isPluginItem: item?.type === "plugin"
-
-    function getPluginContextMenuActions() {
-        if (!isPluginItem || !item?.pluginId)
-            return [];
-
-        var instance = PluginService.pluginInstances[item.pluginId];
-        if (!instance)
-            return [];
-        if (typeof instance.getContextMenuActions !== "function")
-            return [];
-
-        var actions = instance.getContextMenuActions(item.data);
-        if (!Array.isArray(actions))
-            return [];
-
-        return actions;
-    }
-
-    function executePluginAction(actionOrObj) {
-        var actionFunc = typeof actionOrObj === "function" ? actionOrObj : actionOrObj?.action;
-        var closeLauncher = typeof actionOrObj === "object" && actionOrObj?.closeLauncher;
-
-        if (typeof actionFunc === "function")
-            actionFunc();
-
-        if (closeLauncher) {
-            controller?.itemExecuted();
-        } else {
-            controller?.performSearch();
-        }
-        hide();
-    }
 
     readonly property var menuItems: {
         var items = [];
-
-        if (isPluginItem) {
-            var pluginActions = getPluginContextMenuActions();
-            for (var i = 0; i < pluginActions.length; i++) {
-                var act = pluginActions[i];
-                items.push({
-                    type: "item",
-                    icon: act.icon || "play_arrow",
-                    text: act.text || act.name || "",
-                    pluginAction: act
-                });
-            }
-            return items;
-        }
 
         if (item?.type === "app") {
             items.push({
@@ -288,8 +230,6 @@ Popup {
                 var menuItem = menuItems[i];
                 if (menuItem.action)
                     menuItem.action();
-                else if (menuItem.pluginAction)
-                    executePluginAction(menuItem.pluginAction);
                 else if (menuItem.actionData)
                     executeDesktopAction(menuItem.actionData);
                 return;
@@ -495,8 +435,6 @@ Popup {
                                     var menuItem = menuItemDelegate.modelData;
                                     if (menuItem.action)
                                         menuItem.action();
-                                    else if (menuItem.pluginAction)
-                                        root.executePluginAction(menuItem.pluginAction);
                                     else if (menuItem.actionData)
                                         root.executeDesktopAction(menuItem.actionData);
                                 }

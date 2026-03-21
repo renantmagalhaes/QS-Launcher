@@ -55,7 +55,7 @@ function transformCoreApp(app, openLabel) {
     }
 
     return {
-        id: app.builtInPluginId || app.action || "",
+        id: app.action || "",
         type: "app",
         name: app.name || "",
         subtitle: app.comment || "",
@@ -78,43 +78,6 @@ function transformCoreApp(app, openLabel) {
     };
 }
 
-function transformBuiltInLauncherItem(item, pluginId, openLabel) {
-    var rawIcon = item.icon || "extension";
-    var icon = Utils.stripIconPrefix(rawIcon);
-    var iconType = item.iconType;
-    if (!iconType) {
-        if (rawIcon.startsWith("material:"))
-            iconType = "material";
-        else if (rawIcon.startsWith("unicode:"))
-            iconType = "unicode";
-        else
-            iconType = "image";
-    }
-
-    return {
-        id: item.action || "",
-        type: "plugin",
-        name: item.name || "",
-        subtitle: item.comment || "",
-        icon: icon,
-        iconType: iconType,
-        section: "plugin_" + pluginId,
-        data: item,
-        pluginId: pluginId,
-        isBuiltInLauncher: true,
-        keywords: item.keywords || [],
-        actions: [],
-        primaryAction: {
-            name: openLabel,
-            icon: "open_in_new",
-            action: "execute"
-        },
-        _hName: "",
-        _hSub: "",
-        _hRich: false,
-        _preScored: item._preScored
-    };
-}
 
 function transformFileResult(file, openLabel, openFolderLabel, copyPathLabel, openTerminalLabel) {
     var filename = file.path ? file.path.split("/").pop() : "";
@@ -165,85 +128,25 @@ function transformFileResult(file, openLabel, openFolderLabel, copyPathLabel, op
     };
 }
 
-function transformPluginItem(item, pluginId, selectLabel) {
-    var rawIcon = item.icon || "extension";
-    var icon = Utils.stripIconPrefix(rawIcon);
-    var iconType = item.iconType;
-    if (!iconType) {
-        if (rawIcon.startsWith("material:"))
-            iconType = "material";
-        else if (rawIcon.startsWith("unicode:"))
-            iconType = "unicode";
-        else
-            iconType = "image";
+
+
+function transformWindow(win, focusLabel, desktopEntries) {
+    let resolvedIcon = "application-x-window";
+    if (win.class && desktopEntries) {
+        // Try to find a matching desktop entry for the window class
+        const entry = desktopEntries.heuristicLookup(win.class);
+        if (entry && entry.icon) {
+            resolvedIcon = entry.icon;
+        }
     }
 
-    return {
-        id: item.id || item.name || "",
-        type: "plugin",
-        name: item.name || "",
-        subtitle: item.comment || item.description || "",
-        icon: icon,
-        iconType: iconType,
-        section: "plugin_" + pluginId,
-        data: item,
-        pluginId: pluginId,
-        keywords: item.keywords || [],
-        actions: item.actions || [],
-        primaryAction: item.primaryAction || {
-            name: selectLabel,
-            icon: "check",
-            action: "execute"
-        },
-        _hName: "",
-        _hSub: "",
-        _hRich: false,
-        _preScored: item._preScored
-    };
-}
-
-function createPluginBrowseItem(pluginId, plugin, trigger, isBuiltIn, isAllowed, browseLabel, triggerLabel, noTriggerLabel) {
-    var rawIcon = isBuiltIn ? (plugin.cornerIcon || "extension") : (plugin.icon || "extension");
-    return {
-        id: "browse_" + pluginId,
-        type: "plugin_browse",
-        name: plugin.name || pluginId,
-        subtitle: trigger ? triggerLabel.replace("%1", trigger) : noTriggerLabel,
-        icon: isBuiltIn ? rawIcon : Utils.stripIconPrefix(rawIcon),
-        iconType: isBuiltIn ? "material" : Utils.detectIconType(rawIcon),
-        section: "browse_plugins",
-        data: {
-            pluginId: pluginId,
-            plugin: plugin,
-            isBuiltIn: isBuiltIn
-        },
-        actions: [
-            {
-                name: "All",
-                icon: isAllowed ? "visibility" : "visibility_off",
-                action: "toggle_all_visibility"
-            }
-        ],
-        primaryAction: {
-            name: browseLabel,
-            icon: "arrow_forward",
-            action: "browse_plugin"
-        },
-        _hName: "",
-        _hSub: "",
-        _hRich: false,
-        _preScored: undefined
-    };
-}
-
-function transformWindow(win, focusLabel) {
     return {
         id: win.id,
         type: "window",
         name: win.name || "",
         subtitle: win.workspace ? (win.workspace + " • " + (win.comment || "")) : (win.comment || ""),
-        icon: win.icon || "application-x-window",
-        iconType: "material",
+        icon: resolvedIcon,
+        iconType: "image",
         section: "windows",
         data: win,
         actions: [],

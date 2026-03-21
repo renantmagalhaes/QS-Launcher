@@ -24,7 +24,6 @@ Item {
     property int selectedFlatIndex: 0
     property var selectedItem: null
     property bool isSearching: false
-    property string activePluginId: ""
     property var collapsedSections: ({})
     property bool keyboardNavigationActive: false
     property bool active: false
@@ -32,7 +31,6 @@ Item {
     property bool _queryDrivenSearch: false
     property bool _diskCacheConsumed: false
     property var sectionViewModes: ({})
-    property var pluginViewPreferences: ({})
     property int gridColumns: SettingsData.appLauncherGridColumns
     property int viewModeVersion: 0
     property string viewModeContext: "spotlight"
@@ -84,21 +82,6 @@ Item {
         }
     }
 
-    Connections {
-        target: PluginService
-        function onRequestLauncherUpdate(pluginId) {
-            if (!active)
-                return;
-            if (activePluginId === pluginId) {
-                if (activePluginCategories.length <= 1)
-                    loadPluginCategories(pluginId);
-                performSearch();
-                return;
-            }
-            if (searchQuery)
-                performSearch();
-        }
-    }
 
     Process {
         id: wtypeProcess
@@ -119,24 +102,6 @@ Item {
         onTriggered: wtypeProcess.running = true
     }
 
-    function pasteSelected() {
-        if (!selectedItem)
-            return;
-        if (!SessionService.wtypeAvailable) {
-            ToastService.showError("wtype not available - install wtype for paste support");
-            return;
-        }
-
-        const pluginId = selectedItem.pluginId;
-        if (!pluginId)
-            return;
-        const pasteArgs = AppSearchService.getPluginPasteArgs(pluginId, selectedItem.data);
-        if (!pasteArgs)
-            return;
-        copyProcess.command = pasteArgs;
-        copyProcess.running = true;
-        itemExecuted();
-    }
 
     readonly property var sectionDefinitions: [
         {
@@ -168,13 +133,6 @@ Item {
             defaultViewMode: "list"
         },
         {
-            id: "browse_plugins",
-            title: I18n.tr("Browse"),
-            icon: "category",
-            priority: 2.5,
-            defaultViewMode: "grid"
-        },
-        {
             id: "files",
             title: I18n.tr("Files"),
             icon: "folder",
@@ -195,18 +153,13 @@ Item {
     property string fileSearchFolder: ""
     property string fileSearchSort: "score"
 
-    property string pluginFilter: ""
-    property string activePluginName: ""
-    property var activePluginCategories: []
-    property string activePluginCategory: ""
+    property var appTriggers: ({})
+    property var fileTriggers: ({})
+    property var windowTriggers: ({})
     property string appCategory: ""
     property var appCategories: []
 
     function getSectionViewMode(sectionId) {
-        if (sectionId === "browse_plugins")
-            return "list";
-        if (pluginViewPreferences[sectionId]?.enforced)
-            return pluginViewPreferences[sectionId].mode;
         if (sectionViewModes[sectionId])
             return sectionViewModes[sectionId];
 
@@ -219,17 +172,10 @@ Item {
                 return sectionDefinitions[i].defaultViewMode || "list";
         }
 
-        if (pluginViewPreferences[sectionId]?.mode)
-            return pluginViewPreferences[sectionId].mode;
-
         return "list";
     }
 
     function setSectionViewMode(sectionId, mode) {
-        if (sectionId === "browse_plugins")
-            return;
-        if (pluginViewPreferences[sectionId]?.enforced)
-            return;
         sectionViewModes = Object.assign({}, sectionViewModes, {
             [sectionId]: mode
         });
@@ -249,73 +195,19 @@ Item {
     }
 
     function canChangeSectionViewMode(sectionId) {
-        if (sectionId === "browse_plugins")
-            return false;
-        return !pluginViewPreferences[sectionId]?.enforced;
+        return sectionId === "apps" || sectionId === "files" || sectionId === "windows";
     }
 
     function canCollapseSection(sectionId) {
         return searchMode === "all";
     }
 
-    function setPluginViewPreference(pluginId, mode, enforced) {
-        var prefs = Object.assign({}, pluginViewPreferences);
-        prefs[pluginId] = {
-            mode: mode,
-            enforced: enforced || false
-        };
-        pluginViewPreferences = prefs;
-    }
-
-    function applyActivePluginViewPreference(pluginId, isBuiltIn) {
-        var sectionId = "plugin_" + pluginId;
-        var pref = null;
-        if (isBuiltIn) {
-            var builtIn = AppSearchService.builtInPlugins[pluginId];
-            if (builtIn && builtIn.viewMode) {
-                pref = {
-                    mode: builtIn.viewMode,
-                    enforced: builtIn.viewModeEnforced === true
-                };
-            }
-        } else {
-            pref = PluginService.getPluginViewPreference(pluginId);
-        }
-
-        if (pref && pref.mode) {
-            setPluginViewPreference(sectionId, pref.mode, pref.enforced);
-        } else {
-            var prefs = Object.assign({}, pluginViewPreferences);
-            delete prefs[sectionId];
-            pluginViewPreferences = prefs;
-        }
-    }
-
-    function clearActivePluginViewPreference() {
-        var prefs = {};
-        for (var key in pluginViewPreferences) {
-            if (!key.startsWith("plugin_")) {
-                prefs[key] = pluginViewPreferences[key];
-            }
-        }
-        pluginViewPreferences = prefs;
-    }
-
     property int _searchVersion: 0
-    property bool _pluginPhasePending: false
-    property bool _pluginPhaseForceFirst: false
-    property var _phase1Items: []
 
     Timer {
         id: searchDebounce
         interval: 60
         onTriggered: root.performSearch()
-    }
-
-    Timer {
-        id: pluginPhaseTimer
-        interval: 1
-        onTriggered: root._performPluginPhase()
     }
 
     Timer {
@@ -331,13 +223,10 @@ Item {
     function setSearchQuery(query) {
         _searchVersion++;
         _queryDrivenSearch = true;
-        _pluginPhasePending = false;
-        _phase1Items = [];
-        pluginPhaseTimer.stop();
         searchQuery = query;
         searchDebounce.restart();
 
-        if (searchMode !== "plugins" && (searchMode === "files" || query.startsWith("/")) && query.length > 0) {
+        if ((searchMode === "files" || query.startsWith("/")) && query.length > 0) {
             fileSearchDebounce.restart();
         }
     }
@@ -377,7 +266,7 @@ Item {
     }
 
     function cycleMode(reverse = false) {
-        var modes = ["all", "windows", "apps", "files", "plugins"];
+        var modes = ["all", "windows", "apps", "files"];
         var currentIndex = modes.indexOf(searchMode);
         if (!reverse)
             var nextIndex = (currentIndex + 1) % modes.length;
@@ -401,62 +290,18 @@ Item {
         selectedFlatIndex = 0;
         selectedItem = null;
         isSearching = false;
-        activePluginId = "";
-        activePluginName = "";
-        activePluginCategories = [];
-        activePluginCategory = "";
         appCategory = "";
         appCategories = [];
-        pluginFilter = "";
         collapsedSections = {};
-        _clearModeCache();
         _queryDrivenSearch = false;
-        _pluginPhasePending = false;
-        _pluginPhaseForceFirst = false;
-        _phase1Items = [];
-        pluginPhaseTimer.stop();
     }
 
-    function loadPluginCategories(pluginId) {
-        if (!pluginId) {
-            if (activePluginCategories.length > 0) {
-                activePluginCategories = [];
-                activePluginCategory = "";
-            }
-            return;
-        }
-
-        const categories = AppSearchService.getPluginLauncherCategories(pluginId);
-        if (categories.length === activePluginCategories.length) {
-            let same = true;
-            for (let i = 0; i < categories.length; i++) {
-                if (categories[i].id !== activePluginCategories[i]?.id) {
-                    same = false;
-                    break;
-                }
-            }
-            if (same)
-                return;
-        }
-        activePluginCategories = categories;
-        activePluginCategory = "";
-        AppSearchService.setPluginLauncherCategory(pluginId, "");
-    }
-
-    function setActivePluginCategory(categoryId) {
-        if (activePluginCategory === categoryId)
-            return;
-        activePluginCategory = categoryId;
-        AppSearchService.setPluginLauncherCategory(activePluginId, categoryId);
-        performSearch();
-    }
 
     function setAppCategory(category) {
         if (appCategory === category)
             return;
         appCategory = category;
         _queryDrivenSearch = true;
-        _clearModeCache();
         performSearch();
     }
 
@@ -492,14 +337,6 @@ Item {
         performFileSearch();
     }
 
-    function clearPluginFilter() {
-        if (pluginFilter) {
-            pluginFilter = "";
-            performSearch();
-            return true;
-        }
-        return false;
-    }
 
     function preserveSelectionAfterUpdate(forceFirst) {
         if (forceFirst)
@@ -526,15 +363,10 @@ Item {
         var restoreSelection = preserveSelectionAfterUpdate(shouldResetSelection);
 
         var cachedSections = AppSearchService.getCachedDefaultSections();
-        if (!cachedSections && !_diskCacheConsumed && !searchQuery && searchMode === "all" && !pluginFilter) {
+        if (!cachedSections && !_diskCacheConsumed && !searchQuery && searchMode === "all") {
             _diskCacheConsumed = true;
             var diskSections = _loadDiskCache();
             if (diskSections) {
-                activePluginId = "";
-                activePluginName = "";
-                activePluginCategories = [];
-                activePluginCategory = "";
-                clearActivePluginViewPreference();
                 for (var i = 0; i < diskSections.length; i++) {
                     if (collapsedSections[diskSections[i].id] !== undefined)
                         diskSections[i].collapsed = collapsedSections[diskSections[i].id];
@@ -550,12 +382,7 @@ Item {
             }
         }
 
-        if (cachedSections && !searchQuery && searchMode === "all" && !pluginFilter) {
-            activePluginId = "";
-            activePluginName = "";
-            activePluginCategories = [];
-            activePluginCategory = "";
-            clearActivePluginViewPreference();
+        if (cachedSections && !searchQuery && searchMode === "all") {
             var modeCache = _getCachedModeData("all");
             if (modeCache) {
                 _applyHighlights(modeCache.sections, "");
@@ -588,57 +415,6 @@ Item {
         if (calcResult) {
             allItems.push(Transform.transformCalcResult(calcResult, searchQuery, I18n.tr("Copy")));
         }
-
-        var triggerMatch = detectTrigger(searchQuery);
-        if (triggerMatch.pluginId) {
-            var pluginChanged = activePluginId !== triggerMatch.pluginId;
-            activePluginId = triggerMatch.pluginId;
-            activePluginName = getPluginName(triggerMatch.pluginId, triggerMatch.isBuiltIn);
-            applyActivePluginViewPreference(triggerMatch.pluginId, triggerMatch.isBuiltIn);
-
-            if (pluginChanged && !triggerMatch.isBuiltIn)
-                loadPluginCategories(triggerMatch.pluginId);
-
-            var pluginItems = getPluginItems(triggerMatch.pluginId, triggerMatch.query);
-            for (var k = 0; k < pluginItems.length; k++)
-                allItems.push(pluginItems[k]);
-
-            if (triggerMatch.isBuiltIn) {
-                var builtInItems = AppSearchService.getBuiltInLauncherItems(triggerMatch.pluginId, triggerMatch.query);
-                for (var j = 0; j < builtInItems.length; j++) {
-                    allItems.push(transformBuiltInLauncherItem(builtInItems[j], triggerMatch.pluginId));
-                }
-            }
-
-            var dynamicDefs = buildDynamicSectionDefs(allItems);
-            var scoredItems = Scorer.scoreItems(allItems, triggerMatch.query, getFrecencyForItem);
-            var sortAlpha = !triggerMatch.query && SettingsData.sortAppsAlphabetically;
-            var newSections = Scorer.groupBySection(scoredItems, dynamicDefs, sortAlpha, 500);
-
-            for (var sid in collapsedSections) {
-                for (var i = 0; i < newSections.length; i++) {
-                    if (newSections[i].id === sid) {
-                        newSections[i].collapsed = collapsedSections[sid];
-                    }
-                }
-            }
-
-            _applyHighlights(newSections, triggerMatch.query);
-            flatModel = Scorer.flattenSections(newSections);
-            sections = newSections;
-            selectedFlatIndex = restoreSelection(flatModel);
-            updateSelectedItem();
-
-            isSearching = false;
-            searchCompleted();
-            return;
-        }
-
-        activePluginId = "";
-        activePluginName = "";
-        activePluginCategories = [];
-        activePluginCategory = "";
-        clearActivePluginViewPreference();
 
         if (searchMode === "files") {
             var fileQuery = searchQuery.startsWith("/") ? searchQuery.substring(1).trim() : searchQuery.trim();
@@ -727,66 +503,6 @@ Item {
             return;
         }
 
-        if (searchMode === "plugins") {
-            if (!searchQuery && !pluginFilter) {
-                var browseItems = getPluginBrowseItems();
-                for (var k = 0; k < browseItems.length; k++)
-                    allItems.push(browseItems[k]);
-            } else if (pluginFilter) {
-                var isBuiltInFilter = !!AppSearchService.builtInPlugins[pluginFilter];
-                applyActivePluginViewPreference(pluginFilter, isBuiltInFilter);
-
-                var filterItems = getPluginItems(pluginFilter, searchQuery);
-                for (var k = 0; k < filterItems.length; k++)
-                    allItems.push(filterItems[k]);
-
-                var builtInItems = AppSearchService.getBuiltInLauncherItems(pluginFilter, searchQuery);
-                for (var j = 0; j < builtInItems.length; j++) {
-                    allItems.push(transformBuiltInLauncherItem(builtInItems[j], pluginFilter));
-                }
-            } else {
-                var emptyTriggerPlugins = getEmptyTriggerPlugins();
-                for (var i = 0; i < emptyTriggerPlugins.length; i++) {
-                    var pluginId = emptyTriggerPlugins[i];
-                    var pItems = getPluginItems(pluginId, searchQuery);
-                    for (var k = 0; k < pItems.length; k++)
-                        allItems.push(pItems[k]);
-                }
-
-                var builtInLauncherPlugins = getBuiltInEmptyTriggerLaunchers();
-                for (var i = 0; i < builtInLauncherPlugins.length; i++) {
-                    var pluginId = builtInLauncherPlugins[i];
-                    var blItems = AppSearchService.getBuiltInLauncherItems(pluginId, searchQuery);
-                    for (var j = 0; j < blItems.length; j++) {
-                        allItems.push(transformBuiltInLauncherItem(blItems[j], pluginId));
-                    }
-                }
-            }
-
-            var dynamicDefs = buildDynamicSectionDefs(allItems);
-            var scoredItems = Scorer.scoreItems(allItems, searchQuery, getFrecencyForItem);
-            var sortAlpha = !searchQuery && SettingsData.sortAppsAlphabetically;
-            var newSections = Scorer.groupBySection(scoredItems, dynamicDefs, sortAlpha, 500);
-
-            for (var sid in collapsedSections) {
-                for (var i = 0; i < newSections.length; i++) {
-                    if (newSections[i].id === sid) {
-                        newSections[i].collapsed = collapsedSections[sid];
-                    }
-                }
-            }
-
-            _applyHighlights(newSections, searchQuery);
-            flatModel = Scorer.flattenSections(newSections);
-            sections = newSections;
-            selectedFlatIndex = restoreSelection(flatModel);
-            updateSelectedItem();
-
-            isSearching = false;
-            searchCompleted();
-            return;
-        }
-
         var apps = searchApps(searchQuery);
         for (var i = 0; i < apps.length; i++) {
             allItems.push(apps[i]);
@@ -796,48 +512,9 @@ Item {
             WindowSearchService.refreshWindows();
             var windows = WindowSearchService.windows;
             for (var i = 0; i < windows.length; i++) {
-                allItems.push(Transform.transformWindow(windows[i], I18n.tr("Focus")));
+                allItems.push(Transform.transformWindow(windows[i], I18n.tr("Focus"), DesktopEntries));
             }
         }
-
-        if (searchMode === "all") {
-            if (searchQuery && searchQuery.length >= 2) {
-                _pluginPhasePending = true;
-                _phase1Items = allItems.slice();
-                _pluginPhaseForceFirst = shouldResetSelection;
-                pluginPhaseTimer.restart();
-                isSearching = true;
-
-                // Render current results immediately before waiting for plugins
-                var currentDynamicDefs = buildDynamicSectionDefs(allItems);
-                var currentScoredItems = Scorer.scoreItems(allItems, searchQuery, getFrecencyForItem);
-                var currentSections = Scorer.groupBySection(currentScoredItems, currentDynamicDefs, false, 50);
-                sections = currentSections;
-                flatModel = Scorer.flattenSections(currentSections);
-                
-                searchCompleted();
-                return;
-            } else if (!searchQuery) {
-                var emptyTriggerOrdered = getEmptyTriggerPluginsOrdered();
-                for (var i = 0; i < emptyTriggerOrdered.length; i++) {
-                    var plugin = emptyTriggerOrdered[i];
-                    if (plugin.isBuiltIn) {
-                        var blItems = AppSearchService.getBuiltInLauncherItems(plugin.id, searchQuery);
-                        for (var j = 0; j < blItems.length; j++)
-                            allItems.push(transformBuiltInLauncherItem(blItems[j], plugin.id));
-                    } else {
-                        var pItems = getPluginItems(plugin.id, searchQuery);
-                        for (var j = 0; j < pItems.length; j++)
-                            allItems.push(pItems[j]);
-                    }
-                }
-                var browseItems = getPluginBrowseItems();
-                for (var k = 0; k < browseItems.length; k++)
-                    allItems.push(browseItems[k]);
-            }
-        }
-
-        var dynamicDefs = buildDynamicSectionDefs(allItems);
 
         if (currentVersion !== _searchVersion) {
             isSearching = false;
@@ -846,7 +523,7 @@ Item {
 
         var scoredItems = Scorer.scoreItems(allItems, searchQuery, getFrecencyForItem);
         var sortAlpha = !searchQuery && SettingsData.sortAppsAlphabetically;
-        var newSections = Scorer.groupBySection(scoredItems, dynamicDefs, sortAlpha, searchQuery ? 50 : 500);
+        var newSections = Scorer.groupBySection(scoredItems, sectionDefinitions, sortAlpha, searchQuery ? 50 : 500);
 
         if (currentVersion !== _searchVersion) {
             isSearching = false;
@@ -864,7 +541,7 @@ Item {
         flatModel = Scorer.flattenSections(newSections);
         sections = newSections;
 
-        if (!AppSearchService.isCacheValid() && !searchQuery && searchMode === "all" && !pluginFilter) {
+        if (!AppSearchService.isCacheValid() && !searchQuery && searchMode === "all") {
             AppSearchService.setCachedDefaultSections(sections, flatModel);
             _saveDiskCache(sections);
         }
@@ -872,49 +549,6 @@ Item {
         selectedFlatIndex = restoreSelection(flatModel);
         updateSelectedItem();
 
-        isSearching = _pluginPhasePending;
-        searchCompleted();
-    }
-
-    function _performPluginPhase() {
-        _pluginPhasePending = false;
-        if (!searchQuery || searchQuery.length < 2 || searchMode !== "all")
-            return;
-
-        var currentVersion = _searchVersion;
-        var restoreSelection = preserveSelectionAfterUpdate(_pluginPhaseForceFirst);
-        var allItems = _phase1Items;
-        _phase1Items = [];
-
-        var allPluginsOrdered = getAllVisiblePluginsOrdered();
-        var maxPerPlugin = 10;
-        for (var i = 0; i < allPluginsOrdered.length; i++) {
-            if (currentVersion !== _searchVersion)
-                return;
-            var plugin = allPluginsOrdered[i];
-            if (plugin.isBuiltIn) {
-                var blItems = AppSearchService.getBuiltInLauncherItems(plugin.id, searchQuery);
-                var blLimit = Math.min(blItems.length, maxPerPlugin);
-                for (var j = 0; j < blLimit; j++) {
-                    var item = transformBuiltInLauncherItem(blItems[j], plugin.id);
-                    item._preScored = 900 - j;
-                    allItems.push(item);
-                }
-            } else {
-                var pItems = getPluginItems(plugin.id, searchQuery, maxPerPlugin);
-                for (var j = 0; j < pItems.length; j++) {
-                    pItems[j]._preScored = 900 - j;
-                    allItems.push(pItems[j]);
-                }
-            }
-        }
-
-        if (currentVersion !== _searchVersion)
-            return;
-
-        var dynamicDefs = buildDynamicSectionDefs(allItems);
-        var scoredItems = Scorer.scoreItems(allItems, searchQuery, getFrecencyForItem);
-        var newSections = Scorer.groupBySection(scoredItems, dynamicDefs, false, 50);
 
         if (currentVersion !== _searchVersion)
             return;
@@ -1083,269 +717,6 @@ Item {
         return Transform.transformCoreApp(app, I18n.tr("Open"));
     }
 
-    function transformBuiltInLauncherItem(item, pluginId) {
-        return Transform.transformBuiltInLauncherItem(item, pluginId, I18n.tr("Open"));
-    }
-
-    function transformFileResult(file) {
-        return Transform.transformFileResult(file, I18n.tr("Open"), I18n.tr("Open folder"), I18n.tr("Copy path"), I18n.tr("Open in terminal"));
-    }
-
-    function detectTrigger(query) {
-        if (!query || query.length === 0)
-            return {
-                pluginId: null,
-                query: query
-            };
-
-        var pluginTriggers = PluginService.getAllPluginTriggers();
-        for (var trigger in pluginTriggers) {
-            if (trigger && query.startsWith(trigger)) {
-                return {
-                    pluginId: pluginTriggers[trigger],
-                    query: query.substring(trigger.length).trim()
-                };
-            }
-        }
-
-        var builtInTriggers = AppSearchService.getBuiltInLauncherTriggers();
-        for (var trigger in builtInTriggers) {
-            if (trigger && query.startsWith(trigger)) {
-                return {
-                    pluginId: builtInTriggers[trigger],
-                    query: query.substring(trigger.length).trim(),
-                    isBuiltIn: true
-                };
-            }
-        }
-
-        return {
-            pluginId: null,
-            query: query
-        };
-    }
-
-    function getEmptyTriggerPlugins() {
-        var plugins = PluginService.getPluginsWithEmptyTrigger();
-        var visible = plugins.filter(function (pluginId) {
-            return SettingsData.getPluginAllowWithoutTrigger(pluginId);
-        });
-        return sortPluginIdsByOrder(visible);
-    }
-
-    function getAllLauncherPluginIds() {
-        var launchers = PluginService.getLauncherPlugins();
-        return Object.keys(launchers);
-    }
-
-    function getVisibleLauncherPluginIds() {
-        var launchers = PluginService.getLauncherPlugins();
-        var visible = Object.keys(launchers).filter(function (pluginId) {
-            return SettingsData.getPluginAllowWithoutTrigger(pluginId);
-        });
-        return sortPluginIdsByOrder(visible);
-    }
-
-    function getAllBuiltInLauncherIds() {
-        var launchers = AppSearchService.getBuiltInLauncherPlugins();
-        return Object.keys(launchers);
-    }
-
-    function getVisibleBuiltInLauncherIds() {
-        var launchers = AppSearchService.getBuiltInLauncherPlugins();
-        var visible = Object.keys(launchers).filter(function (pluginId) {
-            return SettingsData.getPluginAllowWithoutTrigger(pluginId);
-        });
-        return sortPluginIdsByOrder(visible);
-    }
-
-    function sortPluginIdsByOrder(pluginIds) {
-        return Utils.sortPluginIdsByOrder(pluginIds, SettingsData.launcherPluginOrder || []);
-    }
-
-    function getAllVisiblePluginsOrdered() {
-        var thirdPartyLaunchers = PluginService.getLauncherPlugins() || {};
-        var builtInLaunchers = AppSearchService.getBuiltInLauncherPlugins() || {};
-        var all = [];
-        for (var id in thirdPartyLaunchers) {
-            if (SettingsData.getPluginAllowWithoutTrigger(id))
-                all.push({
-                    id: id,
-                    isBuiltIn: false
-                });
-        }
-        for (var id in builtInLaunchers) {
-            if (SettingsData.getPluginAllowWithoutTrigger(id))
-                all.push({
-                    id: id,
-                    isBuiltIn: true
-                });
-        }
-        return Utils.sortPluginsOrdered(all, SettingsData.launcherPluginOrder || []);
-    }
-
-    function getEmptyTriggerPluginsOrdered() {
-        var thirdParty = PluginService.getPluginsWithEmptyTrigger() || [];
-        var builtIn = AppSearchService.getBuiltInLauncherPluginsWithEmptyTrigger() || [];
-        var all = [];
-        for (var i = 0; i < thirdParty.length; i++) {
-            var id = thirdParty[i];
-            if (SettingsData.getPluginAllowWithoutTrigger(id))
-                all.push({
-                    id: id,
-                    isBuiltIn: false
-                });
-        }
-        for (var i = 0; i < builtIn.length; i++) {
-            var id = builtIn[i];
-            if (SettingsData.getPluginAllowWithoutTrigger(id))
-                all.push({
-                    id: id,
-                    isBuiltIn: true
-                });
-        }
-        return Utils.sortPluginsOrdered(all, SettingsData.launcherPluginOrder || []);
-    }
-
-    function getPluginBrowseItems() {
-        var items = [];
-        var browseLabel = I18n.tr("Browse");
-        var triggerLabel = I18n.tr("Trigger: %1");
-        var noTriggerLabel = I18n.tr("No trigger");
-
-        var launchers = PluginService.getLauncherPlugins();
-        for (var pluginId in launchers) {
-            var trigger = PluginService.getPluginTrigger(pluginId);
-            var isAllowed = SettingsData.getPluginAllowWithoutTrigger(pluginId);
-            items.push(Transform.createPluginBrowseItem(pluginId, launchers[pluginId], trigger, false, isAllowed, browseLabel, triggerLabel, noTriggerLabel));
-        }
-
-        var builtInLaunchers = AppSearchService.getBuiltInLauncherPlugins();
-        for (var pluginId in builtInLaunchers) {
-            var trigger = AppSearchService.getBuiltInPluginTrigger(pluginId);
-            var isAllowed = SettingsData.getPluginAllowWithoutTrigger(pluginId);
-            items.push(Transform.createPluginBrowseItem(pluginId, builtInLaunchers[pluginId], trigger, true, isAllowed, browseLabel, triggerLabel, noTriggerLabel));
-        }
-
-        return items;
-    }
-
-    function getBuiltInEmptyTriggerLaunchers() {
-        var plugins = AppSearchService.getBuiltInLauncherPluginsWithEmptyTrigger();
-        var visible = plugins.filter(function (pluginId) {
-            return SettingsData.getPluginAllowWithoutTrigger(pluginId);
-        });
-        return sortPluginIdsByOrder(visible);
-    }
-
-    function getPluginItems(pluginId, query, limit) {
-        var items = AppSearchService.getPluginItemsForPlugin(pluginId, query);
-        var count = limit > 0 && limit < items.length ? limit : items.length;
-        var transformed = [];
-
-        for (var i = 0; i < count; i++) {
-            transformed.push(transformPluginItem(items[i], pluginId));
-        }
-
-        return transformed;
-    }
-
-    function getPluginName(pluginId, isBuiltIn) {
-        if (isBuiltIn) {
-            var plugin = AppSearchService.builtInPlugins[pluginId];
-            return plugin ? plugin.name : pluginId;
-        }
-        var launchers = PluginService.getLauncherPlugins();
-        if (launchers[pluginId]) {
-            return launchers[pluginId].name || pluginId;
-        }
-        return pluginId;
-    }
-
-    function getPluginMetadata(pluginId) {
-        var builtIn = AppSearchService.builtInPlugins[pluginId];
-        if (builtIn) {
-            return {
-                name: builtIn.name || pluginId,
-                icon: builtIn.cornerIcon || "extension"
-            };
-        }
-        var launchers = PluginService.getLauncherPlugins();
-        if (launchers[pluginId]) {
-            var rawIcon = launchers[pluginId].icon || "extension";
-            return {
-                name: launchers[pluginId].name || pluginId,
-                icon: Utils.stripIconPrefix(rawIcon)
-            };
-        }
-        return {
-            name: pluginId,
-            icon: "extension"
-        };
-    }
-
-    function buildDynamicSectionDefs(items) {
-        var baseDefs = sectionDefinitions.slice();
-        var pluginSections = {};
-        var basePriority = 2.6;
-
-        for (var i = 0; i < items.length; i++) {
-            var section = items[i].section;
-            if (!section || !section.startsWith("plugin_"))
-                continue;
-            if (pluginSections[section])
-                continue;
-            var pluginId = section.substring(7);
-            var meta = getPluginMetadata(pluginId);
-            var viewPref = getPluginViewPref(pluginId);
-
-            pluginSections[section] = {
-                id: section,
-                title: meta.name,
-                icon: meta.icon,
-                priority: basePriority,
-                defaultViewMode: viewPref.mode || "list"
-            };
-
-            if (viewPref.mode)
-                setPluginViewPreference(section, viewPref.mode, viewPref.enforced);
-
-            basePriority += 0.01;
-        }
-
-        for (var sectionId in pluginSections) {
-            baseDefs.push(pluginSections[sectionId]);
-        }
-
-        baseDefs.sort(function (a, b) {
-            return a.priority - b.priority;
-        });
-        return baseDefs;
-    }
-
-    function getPluginViewPref(pluginId) {
-        var builtIn = AppSearchService.builtInPlugins[pluginId];
-        if (builtIn && builtIn.viewMode) {
-            return {
-                mode: builtIn.viewMode,
-                enforced: builtIn.viewModeEnforced === true
-            };
-        }
-
-        var pref = PluginService.getPluginViewPreference(pluginId);
-        if (pref && pref.mode) {
-            return pref;
-        }
-
-        return {
-            mode: "list",
-            enforced: false
-        };
-    }
-
-    function transformPluginItem(item, pluginId) {
-        return Transform.transformPluginItem(item, pluginId, I18n.tr("Select"));
-    }
 
     function getFrecencyForItem(item) {
         if (item.type !== "app")
@@ -1407,9 +778,7 @@ Item {
                     iconType: it.iconType || "image",
                     iconFull: it.iconFull || "",
                     section: it.section || "",
-                    isCore: it.isCore || false,
-                    isBuiltInLauncher: it.isBuiltInLauncher || false,
-                    pluginId: it.pluginId || ""
+                    isCore: it.isCore || false
                 });
             }
             serializable.push({
@@ -1462,8 +831,6 @@ Item {
                     iconFull: it.iconFull || "",
                     section: it.section || "",
                     isCore: it.isCore || false,
-                    isBuiltInLauncher: it.isBuiltInLauncher || false,
-                    pluginId: it.pluginId || "",
                     data: {
                         id: it.id
                     },
@@ -1559,7 +926,6 @@ Item {
 
     function _cancelPendingSelectionReset() {
         _queryDrivenSearch = false;
-        _pluginPhaseForceFirst = false;
     }
 
     function selectNext() {
@@ -1697,21 +1063,6 @@ Item {
     function executeItem(item) {
         if (!item)
             return;
-        if (item.type === "plugin_browse") {
-            var browsePluginId = item.data?.pluginId;
-            if (!browsePluginId)
-                return;
-            var browseTrigger = item.data.isBuiltIn ? AppSearchService.getBuiltInPluginTrigger(browsePluginId) : PluginService.getPluginTrigger(browsePluginId);
-
-            if (browseTrigger && browseTrigger.length > 0) {
-                searchQueryRequested(browseTrigger);
-            } else {
-                setMode("plugins");
-                pluginFilter = browsePluginId;
-                performSearch();
-            }
-            return;
-        }
 
         switch (item.type) {
         case "app":
@@ -1721,13 +1072,6 @@ Item {
                 launchAppAction(item.data);
             } else {
                 launchApp(item.data);
-            }
-            break;
-        case "plugin":
-            if (item.isBuiltInLauncher) {
-                AppSearchService.executeBuiltInLauncherItem(item.data);
-            } else {
-                AppSearchService.executePluginItem(item.data, item.pluginId);
             }
             break;
         case "file":
@@ -1776,14 +1120,6 @@ Item {
                 launchAppWithNvidia(item.data);
             }
             break;
-        case "toggle_all_visibility":
-            if (item.type === "plugin_browse" && item.data?.pluginId) {
-                var pluginId = item.data.pluginId;
-                var currentState = SettingsData.getPluginAllowWithoutTrigger(pluginId);
-                SettingsData.setPluginAllowWithoutTrigger(pluginId, !currentState);
-                performSearch();
-            }
-            return;
         default:
             if (item.type === "app" && action.actionData) {
                 launchAppAction({

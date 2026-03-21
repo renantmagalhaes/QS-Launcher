@@ -132,17 +132,17 @@ FocusScope {
                 actionPanel.hide();
                 return;
             }
-            if (controller.clearPluginFilter())
-                return;
             if (root.parentModal)
                 root.parentModal.hide();
             return;
         case Qt.Key_Backspace:
             if (searchField.text.length === 0) {
-                if (controller.clearPluginFilter())
-                    return;
                 if (controller.autoSwitchedToFiles) {
                     controller.restorePreviousMode();
+                    return;
+                }
+                if (controller.searchMode !== "all") {
+                    controller.setMode("all");
                     return;
                 }
             }
@@ -282,13 +282,6 @@ FocusScope {
             }
             event.accepted = false;
             return;
-        case Qt.Key_4:
-            if (hasCtrl) {
-                controller.setMode("plugins");
-                return;
-            }
-            event.accepted = false;
-            return;
         case Qt.Key_Slash:
             if (event.modifiers === Qt.NoModifier && searchField.text.length === 0) {
                 controller.setMode("files", true);
@@ -349,11 +342,6 @@ FocusScope {
                             id: "files",
                             label: I18n.tr("Files"),
                             icon: "folder"
-                        },
-                        {
-                            id: "plugins",
-                            label: I18n.tr("Plugins"),
-                            icon: "extension"
                         }
                     ]
 
@@ -444,51 +432,14 @@ FocusScope {
                 width: parent.width
                 spacing: Theme.spacingS
 
-                Rectangle {
-                    id: pluginBadge
-                    visible: controller.activePluginName.length > 0
-                    width: visible ? pluginBadgeContent.implicitWidth + Theme.spacingM : 0
-                    height: searchField.height
-                    radius: 16
-                    color: Theme.primary
-
-                    Row {
-                        id: pluginBadgeContent
-                        anchors.centerIn: parent
-                        spacing: Theme.spacingXS
-
-                        DankIcon {
-                            anchors.verticalCenter: parent.verticalCenter
-                            name: "extension"
-                            size: 14
-                            color: Theme.primaryText
-                        }
-
-                        StyledText {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: controller.activePluginName
-                            font.pixelSize: Theme.fontSizeSmall
-                            font.weight: Font.Medium
-                            color: Theme.primaryText
-                        }
-                    }
-
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: Theme.shortDuration
-                            easing.type: Theme.standardEasing
-                        }
-                    }
-                }
-
                 DankTextField {
                     id: searchField
-                    width: parent.width - (pluginBadge.visible ? pluginBadge.width + Theme.spacingS : 0)
+                    width: parent.width
                     cornerRadius: Theme.cornerRadius
                     backgroundColor: Theme.withAlpha(Theme.surfaceContainerHigh, Theme.popupTransparency)
                     normalBorderColor: Theme.outlineMedium
                     focusedBorderColor: Theme.primary
-                    leftIconName: controller.activePluginId ? "extension" : controller.searchQuery.startsWith("/") ? "folder" : "search"
+                    leftIconName: controller.searchQuery.startsWith("/") ? "folder" : "search"
                     leftIconSize: Theme.iconSize
                     leftIconColor: Theme.surfaceVariantText
                     leftIconFocusedColor: Theme.primary
@@ -510,11 +461,20 @@ FocusScope {
 
                     Keys.onPressed: event => {
                         if (event.key === Qt.Key_Escape) {
-                            if (root.parentModal) {
-                                root.parentModal.hide();
-                            }
                             event.accepted = true;
-                        } else if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {
+                            root.requestClose();
+                            return;
+                        }
+
+                        if (event.key === Qt.Key_Backspace && searchField.text === "") {
+                            if (root.controller.searchMode !== "all") {
+                                root.controller.setMode("all");
+                                event.accepted = true;
+                            }
+                            return;
+                        }
+
+                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             if (actionPanel.expanded && actionPanel.selectedActionIndex > 0) {
                                 actionPanel.executeSelectedAction();
                             } else {
@@ -526,62 +486,6 @@ FocusScope {
                 }
             }
 
-            Row {
-                id: categoryRow
-                width: parent.width
-                readonly property bool showPluginCategories: controller.activePluginCategories.length > 0
-                height: showPluginCategories ? 36 : 0
-                visible: showPluginCategories
-                spacing: Theme.spacingS
-
-                clip: true
-
-                Behavior on height {
-                    NumberAnimation {
-                        duration: Theme.shortDuration
-                        easing.type: Theme.standardEasing
-                    }
-                }
-
-                DankDropdown {
-                    id: categoryDropdown
-                    visible: categoryRow.showPluginCategories
-                    width: Math.min(200, parent.width)
-                    compactMode: true
-                    dropdownWidth: 200
-                    popupWidth: 240
-                    maxPopupHeight: 300
-                    enableFuzzySearch: controller.activePluginCategories.length > 8
-                    currentValue: {
-                        const cats = controller.activePluginCategories;
-                        const current = controller.activePluginCategory;
-                        if (!current)
-                            return cats.length > 0 ? cats[0].name : "";
-                        for (let i = 0; i < cats.length; i++) {
-                            if (cats[i].id === current)
-                                return cats[i].name;
-                        }
-                        return cats.length > 0 ? cats[0].name : "";
-                    }
-                    options: {
-                        const cats = controller.activePluginCategories;
-                        const names = [];
-                        for (let i = 0; i < cats.length; i++)
-                            names.push(cats[i].name);
-                        return names;
-                    }
-
-                    onValueChanged: value => {
-                        const cats = controller.activePluginCategories;
-                        for (let i = 0; i < cats.length; i++) {
-                            if (cats[i].name === value) {
-                                controller.setActivePluginCategory(cats[i].id);
-                                return;
-                            }
-                        }
-                    }
-                }
-            }
 
             Item {
                 id: fileFilterRow
@@ -728,7 +632,7 @@ FocusScope {
 
             Item {
                 width: parent.width
-                height: parent.height - searchField.height - categoryRow.height - fileFilterRow.height - actionPanel.height - Theme.spacingXS * ((categoryRow.visible ? 1 : 0) + (fileFilterRow.visible ? 1 : 0) + 2)
+                height: parent.height - searchField.height - fileFilterRow.height - actionPanel.height - Theme.spacingXS * ((fileFilterRow.visible ? 1 : 0) + 2)
                 opacity: root.parentModal?.isClosing ? 0 : 1
 
                 ResultsList {

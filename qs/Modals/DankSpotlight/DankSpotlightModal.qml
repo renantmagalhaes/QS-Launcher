@@ -103,9 +103,7 @@ Item {
         if (spotlightContent.controller) {
             var targetMode = mode || SessionData.launcherLastMode || "all";
             spotlightContent.controller.searchMode = targetMode;
-            spotlightContent.controller.activePluginId = "";
-            spotlightContent.controller.activePluginName = "";
-            spotlightContent.controller.pluginFilter = "";
+            spotlightContent.controller.appCategory = "";
             spotlightContent.controller.fileSearchType = "all";
             spotlightContent.controller.fileSearchExt = "";
             spotlightContent.controller.fileSearchFolder = "";

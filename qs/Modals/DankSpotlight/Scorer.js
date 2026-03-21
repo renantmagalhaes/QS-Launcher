@@ -9,7 +9,6 @@ const Weights = {
     frecency: 2000,
     typeBonus: {
         app: 1000,
-        plugin: 900,
         file: 800,
         action: 600
     }

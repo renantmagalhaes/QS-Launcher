@@ -9,7 +9,7 @@ Rectangle {
 
     property var item: null
     property bool isSelected: false
-    property bool isHovered: itemArea.containsMouse || allModeToggleArea.containsMouse
+    property bool isHovered: itemArea.containsMouse
     property var controller: null
     property int flatIndex: -1
 
@@ -48,7 +48,7 @@ Rectangle {
         id: itemArea
         z: 1
         anchors.fill: parent
-        anchors.rightMargin: root.item?.type === "plugin_browse" ? 40 : 0
+        anchors.rightMargin: 0
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -125,47 +125,7 @@ Rectangle {
             spacing: Theme.spacingS
 
             Rectangle {
-                id: allModeToggle
-                visible: root.item?.type === "plugin_browse"
-                width: 28
-                height: 28
-                radius: 14
-                anchors.verticalCenter: parent.verticalCenter
-                color: allModeToggleArea.containsMouse ? Theme.surfaceHover : "transparent"
-
-                property bool isAllowed: {
-                    if (root.item?.type !== "plugin_browse")
-                        return false;
-                    var pluginId = root.item?.data?.pluginId;
-                    if (!pluginId)
-                        return false;
-                    SettingsData.launcherPluginVisibility;
-                    return SettingsData.getPluginAllowWithoutTrigger(pluginId);
-                }
-
-                DankIcon {
-                    anchors.centerIn: parent
-                    name: allModeToggle.isAllowed ? "visibility" : "visibility_off"
-                    size: 18
-                    color: allModeToggle.isAllowed ? Theme.primary : Theme.surfaceVariantText
-                }
-
-                MouseArea {
-                    id: allModeToggleArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        var pluginId = root.item?.data?.pluginId;
-                        if (!pluginId)
-                            return;
-                        SettingsData.setPluginAllowWithoutTrigger(pluginId, !allModeToggle.isAllowed);
-                    }
-                }
-            }
-
-            Rectangle {
-                visible: !!root.item?.type && root.item.type !== "app" && root.item.type !== "plugin_browse"
+                visible: !!root.item?.type && root.item.type !== "app"
                 width: typeBadge.implicitWidth + Theme.spacingS * 2
                 height: 20
                 radius: 10
@@ -179,10 +139,10 @@ Rectangle {
                         if (!root.item)
                             return "";
                         switch (root.item.type) {
-                        case "plugin":
-                            return I18n.tr("Plugin");
                         case "file":
-                            return root.item.data?.is_dir ? I18n.tr("Folder") : I18n.tr("File");
+                            return I18n.tr("File");
+                        case "window":
+                            return I18n.tr("Window");
                         default:
                             return "";
                         }
