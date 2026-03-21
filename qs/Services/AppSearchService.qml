@@ -4,12 +4,15 @@ pragma ComponentBehavior: Bound
 import QtQml
 import QtQuick
 import Quickshell
+import "../Common/fzf.js" as Fzf
 
 Item {
     id: root
 
     property var applications: []
     property var _transformCache: ({})
+    property var _searchEntries: []
+    property var _finder: null
     property int cacheVersion: 0
 
     function refreshApplications() {
@@ -23,6 +26,8 @@ Item {
             ];
         }
         _transformCache = ({});
+        _searchEntries = [];
+        _finder = null;
         cacheVersion++;
     }
 
@@ -30,6 +35,8 @@ Item {
 
     function invalidateLauncherCache() {
         _transformCache = ({});
+        _searchEntries = [];
+        _finder = null;
         cacheVersion++;
     }
 
@@ -48,8 +55,38 @@ Item {
         return transformed;
     }
 
-    function _tokens(text) {
-        return (text || "").toLowerCase().trim().split(/[\s._-]+/).filter(token => token.length > 0);
+    function _buildSearchText(app) {
+        const parts = [
+            app.name || "",
+            app.genericName || "",
+            app.comment || "",
+            app.id || "",
+            app.execString || "",
+            app.exec || ""
+        ];
+        const keywords = app.keywords || [];
+        for (let i = 0; i < keywords.length; i++)
+            parts.push(keywords[i] || "");
+        return parts.join(" ").replace(/\s+/g, " ").trim();
+    }
+
+    function _ensureFinder() {
+        if (_finder)
+            return _finder;
+
+        _searchEntries = applications.map(app => ({
+            app: app,
+            text: _buildSearchText(app)
+        }));
+
+        _finder = new Fzf.Finder(_searchEntries, {
+            selector: function (entry) {
+                return entry.text;
+            },
+            tiebreakers: [Fzf.byLengthAsc, Fzf.byStartAsc]
+        });
+
+        return _finder;
     }
 
     function searchApplications(query) {
@@ -57,21 +94,11 @@ Item {
         if (!query)
             return visible.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
-        const q = query.toLowerCase().trim();
-        return visible.filter(app => {
-            const haystacks = [
-                app.name || "",
-                app.comment || "",
-                app.genericName || "",
-                app.id || ""
-            ];
-            for (let i = 0; i < haystacks.length; i++) {
-                const value = haystacks[i].toLowerCase();
-                if (value.includes(q))
-                    return true;
-            }
-            const tokens = _tokens((app.name || "") + " " + (app.comment || "") + " " + (app.id || ""));
-            return tokens.some(token => token.startsWith(q));
-        }).sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        const q = query.trim();
+        if (!q)
+            return visible.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        const finder = _ensureFinder();
+        return finder.find(q).map(result => result.item.app);
     }
 }

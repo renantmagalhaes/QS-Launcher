@@ -109,6 +109,46 @@ function calculateTextScore(name, query) {
     return 0
 }
 
+function scoreTokenAgainstItem(item, token) {
+    var bestScore = calculateTextScore((item.name || "").toLowerCase(), token)
+
+    if (item.subtitle) {
+        var subtitleScore = calculateTextScore(item.subtitle.toLowerCase(), token) * 0.5
+        if (subtitleScore > bestScore)
+            bestScore = subtitleScore
+    }
+
+    if (item.keywords) {
+        for (var i = 0; i < item.keywords.length; i++) {
+            var keywordScore = calculateTextScore((item.keywords[i] || "").toLowerCase(), token) * 0.3
+            if (keywordScore > bestScore)
+                bestScore = keywordScore
+        }
+    }
+
+    return bestScore
+}
+
+function scoreMultiTokenQuery(item, query) {
+    var queryTokens = tokenize(query)
+    if (queryTokens.length <= 1)
+        return scoreTokenAgainstItem(item, query)
+
+    var totalScore = 0
+    for (var i = 0; i < queryTokens.length; i++) {
+        var tokenScore = scoreTokenAgainstItem(item, queryTokens[i])
+        if (tokenScore === 0)
+            return 0
+        totalScore += tokenScore
+    }
+
+    var combinedNameScore = calculateTextScore((item.name || "").toLowerCase(), query)
+    if (combinedNameScore > 0)
+        totalScore += combinedNameScore * 0.2
+
+    return totalScore
+}
+
 function score(item, query, frecencyData) {
     var typeBonus = Weights.typeBonus[item.type] || 0
 
@@ -120,22 +160,7 @@ function score(item, query, frecencyData) {
     var name = (item.name || "").toLowerCase()
     var q = query.toLowerCase()
 
-    var textScore = calculateTextScore(name, q)
-
-    if (textScore === 0 && item.subtitle) {
-        var subtitleScore = calculateTextScore(item.subtitle.toLowerCase(), q)
-        textScore = subtitleScore * 0.5
-    }
-
-    if (textScore === 0 && item.keywords) {
-        for (var i = 0; i < item.keywords.length; i++) {
-            var keywordScore = calculateTextScore(item.keywords[i].toLowerCase(), q)
-            if (keywordScore > 0) {
-                textScore = keywordScore * 0.3
-                break
-            }
-        }
-    }
+    var textScore = scoreMultiTokenQuery(item, q)
 
     if (textScore === 0) {
         if (item._preScored !== undefined) {

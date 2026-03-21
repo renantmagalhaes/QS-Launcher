@@ -149,6 +149,11 @@ function transformWindow(win, focusLabel, desktopEntries) {
         iconType: "image",
         section: "windows",
         data: win,
+        keywords: [
+            win.class || "",
+            win.comment || "",
+            win.workspace || ""
+        ],
         actions: [],
         primaryAction: {
             name: focusLabel,
