@@ -27,26 +27,26 @@ When an instance is already running, it toggles the launcher through Quickshell 
 Start the launcher directly:
 
 ```bash
-quickshell -p main.qml
+quickshell -p launcher.qml
 ```
 
 Start hidden in daemon mode:
 
 ```bash
-SPOTLIGHT_START_HIDDEN=1 quickshell -d -n -p main.qml
+SPOTLIGHT_START_HIDDEN=1 quickshell -d -n -p launcher.qml
 ```
 
 Toggle an existing instance:
 
 ```bash
-quickshell ipc --path main.qml call launcher toggle
+quickshell ipc --path launcher.qml call launcher toggle
 ```
 
 Show or hide it explicitly:
 
 ```bash
-quickshell ipc --path main.qml call launcher show
-quickshell ipc --path main.qml call launcher hide
+quickshell ipc --path launcher.qml call launcher show
+quickshell ipc --path launcher.qml call launcher hide
 ```
 
 ## Search Modes

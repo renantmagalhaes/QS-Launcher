@@ -3,7 +3,7 @@
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-MAIN_QML="$SCRIPT_DIR/main.qml"
+MAIN_QML="$SCRIPT_DIR/launcher.qml"
 
 if quickshell ipc --path "$MAIN_QML" call launcher toggle >/dev/null 2>&1; then
     exit 0
