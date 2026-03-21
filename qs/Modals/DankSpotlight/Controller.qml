@@ -281,7 +281,7 @@ Item {
             WindowSearchService.activateWindow(item.data?.windowId);
             break;
         case "calc":
-            copyToClipboard(item.name);
+            copyToClipboard(item.data?.result || item.name || "");
             break;
         }
 
@@ -318,12 +318,30 @@ Item {
     function copyToClipboard(text) {
         if (!text)
             return;
+        const value = String(text);
+
+        if (Quickshell.env("WAYLAND_DISPLAY") !== "") {
+            Quickshell.execDetached(["wl-copy", value]);
+            return;
+        }
+
+        if (Quickshell.env("DISPLAY") !== "") {
+            Quickshell.execDetached([
+                "sh",
+                "-c",
+                "if command -v xclip >/dev/null 2>&1; then printf '%s' \"$1\" | xclip -selection clipboard -in; elif command -v xsel >/dev/null 2>&1; then printf '%s' \"$1\" | xsel --clipboard --input; else exit 1; fi",
+                "spotlight-clipboard",
+                value
+            ]);
+            return;
+        }
+
         Quickshell.execDetached([
             "sh",
             "-c",
-            "if command -v wl-copy >/dev/null 2>&1; then printf '%s' \"$1\" | wl-copy; elif command -v xclip >/dev/null 2>&1; then printf '%s' \"$1\" | xclip -selection clipboard; elif command -v xsel >/dev/null 2>&1; then printf '%s' \"$1\" | xsel --clipboard --input; else exit 1; fi",
+            "if command -v wl-copy >/dev/null 2>&1; then wl-copy \"$1\"; elif command -v xclip >/dev/null 2>&1; then printf '%s' \"$1\" | xclip -selection clipboard -in; elif command -v xsel >/dev/null 2>&1; then printf '%s' \"$1\" | xsel --clipboard --input; else exit 1; fi",
             "spotlight-clipboard",
-            text
+            value
         ]);
     }
 }
