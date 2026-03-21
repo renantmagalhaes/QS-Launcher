@@ -146,6 +146,13 @@ Item {
             defaultViewMode: "list"
         },
         {
+            id: "windows",
+            title: I18n.tr("Windows"),
+            icon: "window",
+            priority: 1.5,
+            defaultViewMode: "list"
+        },
+        {
             id: "apps",
             title: I18n.tr("Applications"),
             icon: "apps",
@@ -339,8 +346,16 @@ Item {
         searchMode = mode;
         modeChanged(mode);
         performSearch();
-        if (mode === "files") {
+        switch (mode) {
+        case "files":
             fileSearchDebounce.restart();
+            break;
+        case "apps":
+            _loadAppCategories();
+            break;
+        case "windows":
+            WindowSearchService.refreshWindows();
+            break;
         }
     }
 
@@ -354,7 +369,7 @@ Item {
     }
 
     function cycleMode(reverse = false) {
-        var modes = ["all", "apps", "files", "plugins"];
+        var modes = ["all", "windows", "apps", "files", "plugins"];
         var currentIndex = modes.indexOf(searchMode);
         if (!reverse)
             var nextIndex = (currentIndex + 1) % modes.length;
@@ -762,6 +777,14 @@ Item {
         var apps = searchApps(searchQuery);
         for (var i = 0; i < apps.length; i++) {
             allItems.push(apps[i]);
+        }
+
+        if (searchMode === "all" || searchMode === "windows") {
+            WindowSearchService.refreshWindows();
+            var windows = WindowSearchService.windows;
+            for (var i = 0; i < windows.length; i++) {
+                allItems.push(Transform.transformWindow(windows[i], I18n.tr("Focus")));
+            }
         }
 
         if (searchMode === "all") {
@@ -1690,6 +1713,9 @@ Item {
         case "file":
             openFile(item.data?.path);
             break;
+        case "window":
+            WindowSearchService.activateWindow(item.data?.windowId);
+            break;
         default:
             return;
         }
@@ -1718,6 +1744,9 @@ Item {
             break;
         case "copy":
             copyToClipboard(item.name);
+            break;
+        case "focus":
+            executeItem(item);
             break;
         case "execute":
             executeItem(item);

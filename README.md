@@ -7,7 +7,8 @@ A portable, standalone version of the DankMaterialShell Spotlight launcher, desi
 - **Standalone Mode**: Runs without the `dms` binary or IPC socket.
 - **Backend Fallbacks**:
     - **Mock Apps**: Provides a curated list of applications (Firefox, Terminal, etc.) when the system application database is unavailable.
-    - **Default Theming**: Includes a premium Material 3 color palette for immediate use.
+- **Window Switching**: Search and switch between open windows using `hyprctl` (Hyprland) or `wmctrl` (Other compositors).
+- **Default Theming**: Includes a premium Material 3 color palette for immediate use.
     - **Silent Execution**: Suppresses backend-related warnings and process errors.
 - **IPC Support**: Can be toggled, shown, or hidden via the `quickshell ipc` command.
 - **Relocated Assets**: All fonts, icons, shaders, and translations are self-contained.

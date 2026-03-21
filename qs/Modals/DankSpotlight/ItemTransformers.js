@@ -235,3 +235,26 @@ function createPluginBrowseItem(pluginId, plugin, trigger, isBuiltIn, isAllowed,
         _preScored: undefined
     };
 }
+
+function transformWindow(win, focusLabel) {
+    return {
+        id: win.id,
+        type: "window",
+        name: win.name || "",
+        subtitle: win.workspace ? (win.workspace + " • " + (win.comment || "")) : (win.comment || ""),
+        icon: win.icon || "application-x-window",
+        iconType: "material",
+        section: "windows",
+        data: win,
+        actions: [],
+        primaryAction: {
+            name: focusLabel,
+            icon: "visibility",
+            action: "focus"
+        },
+        _hName: "",
+        _hSub: "",
+        _hRich: false,
+        _preScored: undefined
+    };
+}

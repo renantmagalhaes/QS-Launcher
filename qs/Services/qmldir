@@ -47,3 +47,4 @@ singleton VPNService 1.0 VPNService.qml
 singleton WallpaperCyclingService 1.0 WallpaperCyclingService.qml
 singleton WeatherService 1.0 WeatherService.qml
 singleton WlrOutputService 1.0 WlrOutputService.qml
+singleton WindowSearchService 1.0 WindowSearchService.qml
