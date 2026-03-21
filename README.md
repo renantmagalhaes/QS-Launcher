@@ -64,6 +64,32 @@ Shortcuts inside the launcher:
 - `Ctrl+2`: Windows
 - `Ctrl+3`: Apps
 
+## Themes
+
+Theme selection is controlled in `qs/Common/SettingsData.qml` through:
+
+```qml
+property string themeName: "default"
+```
+
+Available themes are currently:
+
+- `default`
+- `midnight`
+- `dark`
+- `catppuccin`
+- `dark-purple`
+
+To switch themes, change it for example to:
+
+```qml
+property string themeName: "midnight"
+```
+
+To revert, set it back to `default`.
+
+The actual palette definitions live in `qs/Common/Theme.qml`, so adding more themes is just a matter of adding another named palette there and selecting it with `themeName`.
+
 ## Window Switching Backends
 
 Window lookup and focus use the first available backend:
