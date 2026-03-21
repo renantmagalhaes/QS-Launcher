@@ -1,66 +1,95 @@
-# Standalone Spotlight Launcher
+# Spotlight
 
-A portable, standalone application launcher built with Quickshell.
+`Spotlight` is a standalone application launcher built with Quickshell.
 
-## Features
+This project was inspired by [AvengeMedia/DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell), but the goal here is much narrower: most of the native shell pieces were stripped out so this can run as a focused launcher that replaces tools like `rofi`.
 
-- **Standalone Mode**: Runs without any external shell backend or IPC socket.
-- **Backend Fallbacks**:
-    - **Mock Apps**: Provides a curated list of applications (Firefox, Terminal, etc.) when the system application database is unavailable.
-- **Window Switching**: Search and switch between open windows using `hyprctl` (Hyprland) or `wmctrl` (Other compositors).
-- **Embedded Calculator**: Perform calculations directly in the search bar (e.g., `5*5+(10/2)`).
-- **Default Theming**: Includes a premium Material 3 color palette for immediate use.
-    - **Silent Execution**: Suppresses backend-related warnings and process errors.
-- **IPC Support**: Can be toggled, shown, or hidden via the `quickshell ipc` command.
-- **Relocated Assets**: All fonts, icons, shaders, and translations are self-contained.
+## What It Does
 
-## Usage
+- Launch desktop applications from your installed desktop entries
+- Switch to already open windows
+- Evaluate quick calculator expressions directly in the search field
+- Run as a small Quickshell daemon and expose IPC actions for `toggle`, `show`, and `hide`
+- Start even when the desktop entry database is unavailable by falling back to a tiny mock app list
 
-### 1. Launch the Shell
-To open Spotlight immediately:
+## How It Works
 
-```bash
-quickshell -p main.qml
-```
+The included `spotlight` script is the main entrypoint.
 
-To start it hidden in the background (daemon mode) for compositor autostart:
-
-```bash
-SPOTLIGHT_START_HIDDEN=1 quickshell -d -n -p main.qml
-```
-
-### 2. Toggle the Launcher
-To show or hide the launcher while it is running:
-
-```bash
-quickshell ipc --path main.qml call launcher toggle
-```
-
-### 3. (Optional) Create a Shell Alias
-Add this to your shell configuration (e.g., `~/.zshrc` or `~/.bashrc`):
-
-```bash
-alias spotlight='quickshell ipc --path main.qml call launcher toggle'
-```
-
-### 4. Start-Or-Toggle Helper
-This repo includes a small helper script named `spotlight`. It toggles an existing instance, or starts the daemon hidden and then shows the launcher on first run:
+When an instance is already running, it toggles the launcher through Quickshell IPC. If nothing is running yet, it starts Quickshell in daemon mode, waits for IPC to come up, and then shows the launcher.
 
 ```bash
 ./spotlight
 ```
 
-## Shortcuts
-Once launched, you can map the toggle command to a keyboard shortcut in your compositor (Hyprland, Sway, etc.) for quick access.
+## Manual Commands
 
-### Hyprland Example
-```ini
-bind = SUPER, Space, exec, quickshell ipc --path /path/to/Spotlight/main.qml call launcher toggle
+Start the launcher directly:
+
+```bash
+quickshell -p main.qml
 ```
 
-### Niri Example
+Start hidden in daemon mode:
+
+```bash
+SPOTLIGHT_START_HIDDEN=1 quickshell -d -n -p main.qml
+```
+
+Toggle an existing instance:
+
+```bash
+quickshell ipc --path main.qml call launcher toggle
+```
+
+Show or hide it explicitly:
+
+```bash
+quickshell ipc --path main.qml call launcher show
+quickshell ipc --path main.qml call launcher hide
+```
+
+## Search Modes
+
+- `All`: calculator, windows, and app results together
+- `Windows`: only open windows
+- `Apps`: only installed applications
+
+Shortcuts inside the launcher:
+
+- `Enter`: execute the selected result
+- `Esc`: close the launcher
+- `Up` / `Down`, `Tab` / `Shift+Tab`: move selection
+- `Ctrl+1`: All
+- `Ctrl+2`: Windows
+- `Ctrl+3`: Apps
+
+## Window Switching Backends
+
+Window lookup and focus use the first available backend:
+
+- `hyprctl` on Hyprland
+- `wmctrl` on other X11-capable environments
+- `xdotool` as an activation fallback for some window IDs
+
+## Example Keybinds
+
+Hyprland:
+
+```ini
+bind = SUPER, Space, exec, /path/to/Spotlight/spotlight
+```
+
+Niri:
+
 ```ron
 binds {
-    Mod+Space { spawn "quickshell" "ipc" "--path" "/path/to/Spotlight/main.qml" "call" "launcher" "toggle"; }
+    Mod+Space { spawn "/path/to/Spotlight/spotlight"; }
 }
 ```
+
+## Notes
+
+- Quickshell is required
+- This repo is intentionally scoped as a standalone launcher, not a full desktop shell
+- Assets, widgets, and styling from the original shell were kept where useful, but the overall target is a simple launcher workflow
