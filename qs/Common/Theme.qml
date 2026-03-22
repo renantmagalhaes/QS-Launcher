@@ -197,7 +197,7 @@ QtObject {
             primaryText: "#0f0f0f",
             primaryContainer: "#000000",
             primaryHover: "#e4e4e4",
-            primaryHoverLight: "#cfcfcf",
+            primaryHoverLight: "#282829",
             primaryPressed: "#000000",
             primarySelected: "#000000",
             secondary: "#bdbdbd",
