@@ -19,7 +19,7 @@ QtObject {
     property int appLauncherGridColumns: 4
     property var spotlightSectionViewModes: ({})
     property var appDrawerSectionViewModes: ({})
-    property string themeName: "dracula"
+    property string themeName: "dark"
 
     property string dankLauncherV2Size: "small"
     property bool dankLauncherV2UnloadOnClose: false
