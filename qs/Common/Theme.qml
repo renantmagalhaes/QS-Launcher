@@ -195,10 +195,10 @@ QtObject {
             isLightMode: false,
             primary: "#f2f2f2",
             primaryText: "#0f0f0f",
-            primaryContainer: "#d8d8d8",
+            primaryContainer: "#000000",
             primaryHover: "#e4e4e4",
             primaryHoverLight: "#cfcfcf",
-            primaryPressed: "#000000", // selection
+            primaryPressed: "#000000",
             primarySelected: "#000000",
             secondary: "#bdbdbd",
             surface: "#121212",
