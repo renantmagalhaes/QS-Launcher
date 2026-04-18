@@ -38,6 +38,7 @@ Item {
     signal searchCompleted
 
     readonly property var sectionDefinitions: [
+        { id: "quick_launch", title: I18n.tr("Quick Launch"), icon: "bolt", priority: 0, defaultViewMode: "list" },
         { id: "calculator", title: I18n.tr("Calculator"), icon: "calculate", priority: 0.1, defaultViewMode: "list" },
         { id: "windows", title: I18n.tr("Windows"), icon: "window", priority: 1, defaultViewMode: "list" },
         { id: "apps", title: I18n.tr("Applications"), icon: "apps", priority: 2, defaultViewMode: "list" }
@@ -153,6 +154,24 @@ Item {
         }
 
         const scoredItems = Scorer.scoreItems(allItems, query, null);
+
+        if (query.length > 0) {
+            for (let i = 0; i < scoredItems.length; i++) {
+                if (scoredItems[i].item.type === "app") {
+                    const originalItem = scoredItems[i].item;
+                    const quickLaunchItem = Object.assign({}, originalItem);
+                    quickLaunchItem.section = "quick_launch";
+                    
+                    // Prepend the duplicated item for the Quick Launch section
+                    scoredItems.unshift({
+                        item: quickLaunchItem,
+                        score: scoredItems[i].score
+                    });
+                    break;
+                }
+            }
+        }
+
         const grouped = Scorer.groupBySection(scoredItems, sectionDefinitions, SettingsData.sortAppsAlphabetically, query ? maxSearchResultsPerSection : 500, query);
 
         for (let i = 0; i < grouped.length; i++) {
