@@ -4,6 +4,8 @@
 
 This project was inspired by [AvengeMedia/DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell), but the goal here is much narrower: most of the native shell pieces were stripped out so this can run as a focused launcher that replaces tools like `rofi`.
 
+![alt text](./assets/image.png)
+
 ## What It Does
 
 - Launch desktop applications from your installed desktop entries
